@@ -214,13 +214,12 @@
                 if (filtroRodeo !== "TODOS" && ins.rodeo !== filtroRodeo) return;
                 if (filtroSerie !== "TODOS" && ins.serie !== filtroSerie) return;
 
-                // Generar lista de jinetes de forma dinámica
                 let jinetesHTML = "";
-                let maxJinetes = ins.cantidadJinetes || (ins.jinete2 ? 2 : 1); // Soporte para data vieja
+                let maxJinetes = ins.cantidadJinetes || (ins.jinete2 ? 2 : 1); 
                 
                 for(let i = 1; i <= maxJinetes; i++) {
                     if(ins[`jinete${i}`]) {
-                        const clubTxt = ins[`club${i}`] || ins.club || 'Sin Club'; // Compatibilidad vieja/nueva
+                        const clubTxt = ins[`club${i}`] || ins.club || 'Sin Club';
                         const fonoTxt = ins[`telefono${i}`] || ins.telefono || '-';
                         const criaderoTxt = ins[`criadero${i}`] ? `(Criadero: ${ins[`criadero${i}`]})` : '';
                         
@@ -275,11 +274,12 @@
             if(confirm("¿Borrar a este equipo de la pantalla?")) await updateDoc(doc(db, "inscripciones", id), { estado: "eliminado" });
         };
 
-        // Generador de EXCEL Inteligente y Dinámico
+        // Generador de EXCEL Optimizado y Profesional
         window.exportarExcel = function() {
             const filtroRodeo = document.getElementById('filtroRodeoTabla').value;
             const filtroSerie = document.getElementById('filtroSerieTabla').value;
             
+            // 1. Filtrar los datos según lo que se ve en pantalla
             const datosAExportar = inscripcionesGlobales.filter(ins => {
                 if (ins.estado === "eliminado") return false;
                 if (filtroRodeo !== "TODOS" && ins.rodeo !== filtroRodeo) return false;
@@ -287,34 +287,63 @@
                 return true;
             });
 
-            if(datosAExportar.length === 0) return alert("No hay datos para exportar.");
+            if(datosAExportar.length === 0) return alert("No hay datos para exportar con este filtro.");
             
-            // Reconstruimos los datos para crear las columnas necesarias
+            // 2. Descubrir cuál es el número MÁXIMO de jinetes reales en esta exportación
+            let maxJinetesExportacion = 1;
+            datosAExportar.forEach(ins => {
+                let cantidad = ins.cantidadJinetes || (ins.jinete2 ? 2 : 1);
+                if(cantidad > maxJinetesExportacion) maxJinetesExportacion = cantidad;
+            });
+
+            // 3. Limpiar y estructurar los datos uniformemente
             const datosLimpios = datosAExportar.map(ins => {
                 let filaExcel = {
-                    Rodeo: ins.rodeo,
-                    Serie: ins.serie
+                    "Rodeo": ins.rodeo,
+                    "Serie": ins.serie
                 };
-
-                let maxJinetes = ins.cantidadJinetes || (ins.jinete2 ? 2 : 1);
                 
-                for(let i = 1; i <= 10; i++) {
-                    if (i <= maxJinetes && ins[`jinete${i}`]) {
-                        filaExcel[`Jinete ${i} - Nombre`] = ins[`jinete${i}`];
-                        filaExcel[`Jinete ${i} - RUT`] = ins[`rut${i}`];
-                        filaExcel[`Jinete ${i} - Caballo`] = ins[`caballo${i}`];
-                        filaExcel[`Jinete ${i} - Criadero`] = ins[`criadero${i}`] || '';
-                        filaExcel[`Jinete ${i} - Club`] = ins[`club${i}`] || ins.club || '';
-                        filaExcel[`Jinete ${i} - Teléfono`] = ins[`telefono${i}`] || ins.telefono || '';
-                    }
+                // Forzamos a que todas las filas tengan las mismas columnas exactas
+                for(let i = 1; i <= maxJinetesExportacion; i++) {
+                    filaExcel[`Jinete ${i} - Nombre`] = ins[`jinete${i}`] || '-';
+                    filaExcel[`Jinete ${i} - RUT`] = ins[`rut${i}`] || '-';
+                    filaExcel[`Jinete ${i} - Caballo`] = ins[`caballo${i}`] || '-';
+                    filaExcel[`Jinete ${i} - Criadero`] = ins[`criadero${i}`] || '-';
+                    filaExcel[`Jinete ${i} - Club`] = ins[`club${i}`] || '-';
+                    filaExcel[`Jinete ${i} - Teléfono`] = ins[`telefono${i}`] || '-';
                 }
                 return filaExcel;
             });
 
             const ws = XLSX.utils.json_to_sheet(datosLimpios);
+
+            // 4. Optimizar el ancho de las columnas (Estética del Excel)
+            let anchosColumnas = [
+                {wch: 22}, // Ancho para Rodeo
+                {wch: 20}  // Ancho para Serie
+            ];
+            
+            // Multiplicamos los anchos por la cantidad de jinetes que haya
+            for(let i = 1; i <= maxJinetesExportacion; i++) {
+                anchosColumnas.push({wch: 25}); // Nombre
+                anchosColumnas.push({wch: 15}); // RUT
+                anchosColumnas.push({wch: 20}); // Caballo
+                anchosColumnas.push({wch: 20}); // Criadero
+                anchosColumnas.push({wch: 25}); // Club
+                anchosColumnas.push({wch: 15}); // Teléfono
+            }
+            ws['!cols'] = anchosColumnas;
+
+            // 5. Crear archivo y descargar
             const wb = XLSX.utils.book_new();
             XLSX.utils.book_append_sheet(wb, ws, "Inscripciones");
-            XLSX.writeFile(wb, `Inscripciones_${filtroRodeo !== "TODOS" ? filtroRodeo : "Totales"}.xlsx`);
+            
+            let nombreArchivo = "Inscripciones";
+            if(filtroRodeo !== "TODOS") nombreArchivo += "_" + filtroRodeo;
+            if(filtroSerie !== "TODOS") nombreArchivo += "_" + filtroSerie;
+            nombreArchivo += ".xlsx";
+            
+            XLSX.writeFile(wb, nombreArchivo);
         };
 
         setInterval(() => {
