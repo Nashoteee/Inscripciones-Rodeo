@@ -27,6 +27,7 @@
         
         .item-lista { display: flex; justify-content: space-between; align-items: center; background: #f8f9fa; padding: 10px; border: 1px solid #ddd; border-radius: 4px; margin-bottom: 10px; }
         .timer { font-family: monospace; font-weight: bold; color: #d35400; font-size: 1.1em; background: #ffeaa7; padding: 3px 8px; border-radius: 4px;}
+        .etiqueta-rodeo { font-size: 12px; color: #7f8c8d; font-weight: bold; }
         
         table { width: 100%; border-collapse: collapse; margin-top: 15px; font-size: 14px; }
         th, td { border: 1px solid #ddd; padding: 8px; text-align: left; }
@@ -51,8 +52,8 @@
             <!-- Columna Rodeos -->
             <div class="col card">
                 <h3>🤠 Gestión de Rodeos</h3>
-                <input type="text" id="nuevoRodeo" placeholder="Nombre del nuevo rodeo (Ej: Rodeo Oficial 2026)">
-                <button class="btn-crear" onclick="crearItem('rodeos', 'nuevoRodeo')">+ Abrir Nuevo Rodeo</button>
+                <input type="text" id="nuevoRodeo" placeholder="Nombre del nuevo rodeo (Ej: Rodeo Santa Elena)">
+                <button class="btn-crear" onclick="crearRodeo()">+ Abrir Nuevo Rodeo</button>
                 <h4>Rodeos Abiertos (Activos):</h4>
                 <div id="listaRodeos"></div>
             </div>
@@ -60,9 +61,15 @@
             <!-- Columna Series -->
             <div class="col card">
                 <h3>🐎 Gestión de Series</h3>
+                
+                <!-- NUEVO: Seleccionar a qué rodeo pertenece la serie -->
+                <select id="rodeoParaSerie">
+                    <option value="">Cargando rodeos disponibles...</option>
+                </select>
+                
                 <input type="text" id="nuevaSerie" placeholder="Nombre de la serie (Ej: Serie Potros)">
-                <button class="btn-crear" onclick="crearItem('series', 'nuevaSerie')">+ Abrir Nueva Serie</button>
-                <h4>Series Abiertas (Activas):</h4>
+                <button class="btn-crear" onclick="crearSerie()">+ Abrir Nueva Serie</button>
+                <h4>Series Abiertas (Enlazadas a Rodeos):</h4>
                 <div id="listaSeries"></div>
             </div>
         </div>
@@ -111,29 +118,36 @@
         
         let inscripcionesGlobales = [];
 
-        // Sistema básico de Login
         window.verificarPassword = function() {
             if(document.getElementById('passInput').value === "rodeo2026") {
                 document.getElementById('loginScreen').style.display = "none";
                 document.getElementById('adminDashboard').style.display = "block";
-                iniciarBaseDeDatos(); // Solo carga los datos si la contraseña es correcta
+                iniciarBaseDeDatos();
             } else {
                 alert("Contraseña incorrecta");
             }
         };
 
         function iniciarBaseDeDatos() {
-            // Escuchar Rodeos Abiertos
+            // Escuchar Rodeos Abiertos (Para la lista y para el menú de Series)
             onSnapshot(query(collection(db, "rodeos"), where("estado", "==", "abierto")), (snapshot) => {
-                const contenedor = document.getElementById('listaRodeos');
-                contenedor.innerHTML = '';
+                const contenedorRodeos = document.getElementById('listaRodeos');
+                const selectorRodeoParaSerie = document.getElementById('rodeoParaSerie');
+                
+                contenedorRodeos.innerHTML = '';
+                selectorRodeoParaSerie.innerHTML = '<option value="">1. Seleccione a qué Rodeo pertenece la serie...</option>';
+
                 snapshot.forEach(d => {
                     const data = d.data();
-                    contenedor.innerHTML += `
+                    // Agregar a la lista visual
+                    contenedorRodeos.innerHTML += `
                         <div class="item-lista">
                             <div><strong>${data.nombre}</strong><br><span class="timer" data-inicio="${data.fechaApertura}">00:00:00</span></div>
                             <button class="btn-cerrar" onclick="cerrarItem('rodeos', '${d.id}')">Cerrar</button>
                         </div>`;
+                    
+                    // Agregar al menú desplegable para crear series
+                    selectorRodeoParaSerie.innerHTML += `<option value="${data.nombre}">${data.nombre}</option>`;
                 });
             });
 
@@ -145,7 +159,11 @@
                     const data = d.data();
                     contenedor.innerHTML += `
                         <div class="item-lista">
-                            <div><strong>${data.nombre}</strong><br><span class="timer" data-inicio="${data.fechaApertura}">00:00:00</span></div>
+                            <div>
+                                <strong>${data.nombre}</strong> <br>
+                                <span class="etiqueta-rodeo">Pertenece a: ${data.rodeoNombre}</span><br>
+                                <span class="timer" data-inicio="${data.fechaApertura}">00:00:00</span>
+                            </div>
                             <button class="btn-cerrar" onclick="cerrarItem('series', '${d.id}')">Cerrar</button>
                         </div>`;
                 });
@@ -174,21 +192,38 @@
             });
         }
 
-        // Funciones Globales para Firebase
-        window.crearItem = async function(coleccion, inputId) {
-            const nombre = document.getElementById(inputId).value;
-            if(!nombre) return alert("Escribe un nombre");
+        // Crear Rodeo
+        window.crearRodeo = async function() {
+            const nombre = document.getElementById('nuevoRodeo').value;
+            if(!nombre) return alert("Escribe un nombre para el Rodeo");
             
-            await addDoc(collection(db, coleccion), {
+            await addDoc(collection(db, "rodeos"), {
                 nombre: nombre,
                 estado: "abierto",
                 fechaApertura: Date.now()
             });
-            document.getElementById(inputId).value = '';
+            document.getElementById('nuevoRodeo').value = '';
+        };
+
+        // Crear Serie enlazada a un Rodeo
+        window.crearSerie = async function() {
+            const rodeoSeleccionado = document.getElementById('rodeoParaSerie').value;
+            const nombreSerie = document.getElementById('nuevaSerie').value;
+            
+            if(!rodeoSeleccionado) return alert("Por favor, selecciona a qué Rodeo pertenece esta serie.");
+            if(!nombreSerie) return alert("Escribe un nombre para la Serie.");
+            
+            await addDoc(collection(db, "series"), {
+                nombre: nombreSerie,
+                rodeoNombre: rodeoSeleccionado,
+                estado: "abierto",
+                fechaApertura: Date.now()
+            });
+            document.getElementById('nuevaSerie').value = '';
         };
 
         window.cerrarItem = async function(coleccion, id) {
-            if(confirm("¿Seguro que deseas cerrar esto? Ya no aparecerá en el formulario público.")) {
+            if(confirm("¿Seguro que deseas cerrar esto? Ya no aparecerá en el formulario de los jinetes.")) {
                 await updateDoc(doc(db, coleccion, id), { estado: "cerrado" });
             }
         };
@@ -207,18 +242,15 @@
             XLSX.writeFile(wb, "Base_Datos_Rodeo.xlsx");
         };
 
-        // Lógica del Temporizador en tiempo real
         setInterval(() => {
             document.querySelectorAll('.timer').forEach(el => {
                 const inicio = parseInt(el.getAttribute('data-inicio'));
                 const dif = Date.now() - inicio;
-                
                 let segundos = Math.floor(dif / 1000);
                 let horas = Math.floor(segundos / 3600);
                 segundos %= 3600;
                 let minutos = Math.floor(segundos / 60);
                 segundos %= 60;
-                
                 el.innerText = `${horas}h ${minutos}m ${segundos}s`;
             });
         }, 1000);
