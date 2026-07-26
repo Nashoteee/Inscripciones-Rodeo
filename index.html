@@ -27,6 +27,7 @@
         #tiempoRestante { display: none; color: #d35400; font-weight: bold; margin-top: 10px; font-family: monospace; font-size: 1.2em; background: #ffeaa7; padding: 8px; border-radius: 4px; text-align: center; border: 1px solid #f1c40f; }
         
         .botones-dinamicos { display: flex; gap: 10px; }
+        .alerta-pago { background-color: #e8f8f5; border: 1px solid #a3e4d7; padding: 15px; border-radius: 6px; margin-top: 20px; }
     </style>
 </head>
 <body>
@@ -60,7 +61,6 @@
 
                     <hr style="margin: 20px 0; border: 1px solid #eee;">
                     
-                    <!-- Contenedor dinámico de Jinetes -->
                     <div id="contenedorJinetes">
                         <!-- El Jinete 1 se carga por defecto -->
                     </div>
@@ -70,7 +70,14 @@
                         <button type="button" id="btnQuitarJinete" class="btn-remove">- Quitar Último Jinete</button>
                     </div>
 
-                    <button type="submit" id="btnRegistrar">Registrar Inscripción Completa</button>
+                    <!-- NUEVA SECCIÓN DE PAGO -->
+                    <div class="alerta-pago">
+                        <h3>💳 Comprobante de Pago</h3>
+                        <p style="font-size: 14px; color: #555; margin-bottom: 10px;">Para hacer válida la inscripción, es <strong>obligatorio</strong> adjuntar el comprobante de transferencia o depósito correspondiente.</p>
+                        <input type="file" id="comprobante" accept="image/png, image/jpeg, application/pdf" required>
+                    </div>
+
+                    <button type="submit" id="btnRegistrar">Subir y Registrar Inscripción Completa</button>
                 </form>
             </div>
         </div>
@@ -81,6 +88,8 @@
     <script type="module">
         import { initializeApp } from "https://www.gstatic.com/firebasejs/10.12.2/firebase-app.js";
         import { getFirestore, collection, addDoc, onSnapshot, query, where } from "https://www.gstatic.com/firebasejs/10.12.2/firebase-firestore.js";
+        // NUEVO: Importaciones de Storage para subir archivos
+        import { getStorage, ref, uploadBytes, getDownloadURL } from "https://www.gstatic.com/firebasejs/10.12.2/firebase-storage.js";
 
         const firebaseConfig = {
           apiKey: "AIzaSyCqtSOu4YemJGUb9dRG_7IDZZBL4E3yNsM",
@@ -93,6 +102,7 @@
 
         const app = initializeApp(firebaseConfig);
         const db = getFirestore(app);
+        const storage = getStorage(app); // Inicializar bodega
 
         const selectRodeo = document.getElementById('rodeo');
         const selectSerie = document.getElementById('serie');
@@ -141,11 +151,8 @@
 
         document.getElementById('btnAgregarJinete').addEventListener('click', agregarJinete);
         document.getElementById('btnQuitarJinete').addEventListener('click', quitarJinete);
-
-        // Cargar el Jinete 1 al iniciar
         agregarJinete();
 
-        // Escuchar Rodeos
         onSnapshot(query(collection(db, "rodeos"), where("estado", "==", "abierto")), (snapshot) => {
             selectRodeo.innerHTML = '<option value="">Seleccione el Rodeo...</option>';
             if(snapshot.empty) {
@@ -158,7 +165,6 @@
             }
         });
 
-        // Escuchar Series
         selectRodeo.addEventListener('change', (e) => {
             const rodeoSel = e.target.value;
             clearInterval(cronometroInterval); timerDiv.style.display = "none"; btnRegistrar.disabled = false;
@@ -177,7 +183,6 @@
             });
         });
 
-        // Cronómetro
         selectSerie.addEventListener('change', () => {
             clearInterval(cronometroInterval);
             const cierre = selectSerie.options[selectSerie.selectedIndex].getAttribute('data-cierre');
@@ -197,17 +202,31 @@
             } else { timerDiv.style.display = "none"; }
         });
 
-        // Guardar Inscripción Dinámica
         document.getElementById('registroForm').addEventListener('submit', async function(e) {
             e.preventDefault();
             if(!selectSerie.value) return alert("Debes seleccionar una serie válida.");
-            btnRegistrar.innerText = "Guardando..."; btnRegistrar.disabled = true;
+            
+            // Validar que subió archivo
+            const archivoComprobante = document.getElementById('comprobante').files[0];
+            if(!archivoComprobante) return alert("Debes adjuntar el comprobante de pago.");
+
+            btnRegistrar.innerText = "Subiendo archivo e inscribiendo... Espere por favor"; 
+            btnRegistrar.disabled = true;
 
             try {
+                // 1. Subir el archivo a Firebase Storage
+                const nombreArchivoSeguro = Date.now() + "_" + archivoComprobante.name;
+                const storageReferencia = ref(storage, 'comprobantes/' + nombreArchivoSeguro);
+                
+                await uploadBytes(storageReferencia, archivoComprobante);
+                const urlDescargaComprobante = await getDownloadURL(storageReferencia);
+
+                // 2. Guardar la inscripción con la URL del comprobante
                 let datosAguardar = {
                     rodeo: document.getElementById('rodeo').value,
                     serie: document.getElementById('serie').value,
                     cantidadJinetes: totalJinetes,
+                    comprobanteUrl: urlDescargaComprobante, // Guardamos el link de la foto
                     fecha: Date.now(),
                     estado: "activo"
                 };
@@ -226,7 +245,7 @@
                 location.reload(); 
             } catch (error) {
                 alert("Error al guardar: " + error.message);
-                btnRegistrar.innerText = "Registrar Inscripción Completa"; btnRegistrar.disabled = false;
+                btnRegistrar.innerText = "Subir y Registrar Inscripción Completa"; btnRegistrar.disabled = false;
             }
         });
     </script>
