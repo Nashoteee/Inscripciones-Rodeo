@@ -4,6 +4,7 @@
     <meta charset="UTF-8">
     <meta name="viewport" content="width=device-width, initial-scale=1.0">
     <title>Inscripciones de Rodeo</title>
+    <!-- Librería para exportar a Excel -->
     <script src="https://cdnjs.cloudflare.com/ajax/libs/xlsx/0.18.5/xlsx.full.min.js"></script>
     <style>
         body { font-family: 'Segoe UI', Tahoma, Geneva, Verdana, sans-serif; background-color: #f9f9f9; padding: 20px; color: #333; }
@@ -24,6 +25,7 @@
         th { background-color: #f4f4f4; }
         .stats { background: #e8f4f8; padding: 10px; border-radius: 4px; margin-bottom: 15px; }
         
+        /* Estilos del panel de control y mensajes de cierre */
         .control-panel { background: #fff3cd; padding: 15px; border-radius: 6px; margin-bottom: 20px; border: 1px solid #ffe69c; }
         .mensaje-cerrado { display: none; background: #f8d7da; color: #721c24; padding: 20px; border-radius: 6px; text-align: center; border: 1px solid #f5c6cb; margin-bottom: 20px; }
         
@@ -137,7 +139,7 @@
         import { initializeApp } from "https://www.gstatic.com/firebasejs/10.12.2/firebase-app.js";
         import { getFirestore, collection, addDoc, onSnapshot, deleteDoc, doc, setDoc } from "https://www.gstatic.com/firebasejs/10.12.2/firebase-firestore.js";
 
-        // Tus llaves de Firebase
+        // Tus llaves de Firebase (Configuración exacta proporcionada)
         const firebaseConfig = {
           apiKey: "AIzaSyCqtSOu4YemJGUb9dRG_7IDZZBL4E3yNsM",
           authDomain: "inscripciones-rodeos-909bb.firebaseapp.com",
