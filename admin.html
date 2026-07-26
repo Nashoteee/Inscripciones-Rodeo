@@ -23,11 +23,15 @@
         .btn-crear { background-color: #2980b9; color: white; font-weight: bold; border: none; cursor: pointer; }
         .btn-crear:hover { background-color: #1f6391; }
         .btn-cerrar { background-color: #e74c3c; color: white; border: none; padding: 5px 10px; cursor: pointer; border-radius: 4px; }
-        .btn-excel { background-color: #27ae60; color: white; border: none; font-weight: bold; cursor: pointer; }
+        .btn-excel { background-color: #27ae60; color: white; border: none; font-weight: bold; cursor: pointer; margin-bottom: 15px;}
         
         .item-lista { display: flex; justify-content: space-between; align-items: center; background: #f8f9fa; padding: 10px; border: 1px solid #ddd; border-radius: 4px; margin-bottom: 10px; }
         .timer { font-family: monospace; font-weight: bold; color: #d35400; font-size: 1.1em; background: #ffeaa7; padding: 3px 8px; border-radius: 4px;}
         .etiqueta-rodeo { font-size: 12px; color: #7f8c8d; font-weight: bold; }
+        
+        /* Controles de Filtro */
+        .filtros-container { display: flex; gap: 10px; background: #ecf0f1; padding: 15px; border-radius: 6px; margin-bottom: 15px; border: 1px solid #bdc3c7;}
+        .filtros-container select { margin-bottom: 0; }
         
         table { width: 100%; border-collapse: collapse; margin-top: 15px; font-size: 14px; }
         th, td { border: 1px solid #ddd; padding: 8px; text-align: left; }
@@ -61,12 +65,9 @@
             <!-- Columna Series -->
             <div class="col card">
                 <h3>🐎 Gestión de Series</h3>
-                
-                <!-- NUEVO: Seleccionar a qué rodeo pertenece la serie -->
                 <select id="rodeoParaSerie">
                     <option value="">Cargando rodeos disponibles...</option>
                 </select>
-                
                 <input type="text" id="nuevaSerie" placeholder="Nombre de la serie (Ej: Serie Potros)">
                 <button class="btn-crear" onclick="crearSerie()">+ Abrir Nueva Serie</button>
                 <h4>Series Abiertas (Enlazadas a Rodeos):</h4>
@@ -74,10 +75,28 @@
             </div>
         </div>
 
-        <!-- Tabla de Inscripciones -->
+        <!-- Tabla de Inscripciones Mejorada -->
         <div class="card">
             <h3>📋 Base de Datos de Inscripciones</h3>
-            <button class="btn-excel" onclick="exportarExcel()">📥 Descargar Todo a Excel</button>
+            
+            <!-- NUEVO: Filtros para separar la vista -->
+            <div class="filtros-container">
+                <div style="flex: 1;">
+                    <label style="font-size: 12px; font-weight: bold; color: #7f8c8d;">Filtrar por Rodeo:</label>
+                    <select id="filtroRodeoTabla" onchange="renderizarTabla()">
+                        <option value="TODOS">Todos los Rodeos</option>
+                    </select>
+                </div>
+                <div style="flex: 1;">
+                    <label style="font-size: 12px; font-weight: bold; color: #7f8c8d;">Filtrar por Serie:</label>
+                    <select id="filtroSerieTabla" onchange="renderizarTabla()">
+                        <option value="TODOS">Todas las Series</option>
+                    </select>
+                </div>
+            </div>
+
+            <button class="btn-excel" onclick="exportarExcel()">📥 Descargar a Excel (Aplica filtros)</button>
+            
             <div style="overflow-x: auto;">
                 <table id="tablaInscripciones">
                     <thead>
@@ -102,7 +121,7 @@
 
     <script type="module">
         import { initializeApp } from "https://www.gstatic.com/firebasejs/10.12.2/firebase-app.js";
-        import { getFirestore, collection, addDoc, onSnapshot, query, where, updateDoc, doc, deleteDoc } from "https://www.gstatic.com/firebasejs/10.12.2/firebase-firestore.js";
+        import { getFirestore, collection, addDoc, onSnapshot, query, where, updateDoc, doc } from "https://www.gstatic.com/firebasejs/10.12.2/firebase-firestore.js";
 
         const firebaseConfig = {
           apiKey: "AIzaSyCqtSOu4YemJGUb9dRG_7IDZZBL4E3yNsM",
@@ -116,7 +135,7 @@
         const app = initializeApp(firebaseConfig);
         const db = getFirestore(app);
         
-        let inscripcionesGlobales = [];
+        let inscripcionesGlobales = []; // Guarda todo el respaldo en memoria
 
         window.verificarPassword = function() {
             if(document.getElementById('passInput').value === "rodeo2026") {
@@ -129,117 +148,169 @@
         };
 
         function iniciarBaseDeDatos() {
-            // Escuchar Rodeos Abiertos (Para la lista y para el menú de Series)
-            onSnapshot(query(collection(db, "rodeos"), where("estado", "==", "abierto")), (snapshot) => {
+            // Escuchar Rodeos
+            onSnapshot(collection(db, "rodeos"), (snapshot) => {
                 const contenedorRodeos = document.getElementById('listaRodeos');
                 const selectorRodeoParaSerie = document.getElementById('rodeoParaSerie');
+                const filtroRodeoTabla = document.getElementById('filtroRodeoTabla');
                 
                 contenedorRodeos.innerHTML = '';
                 selectorRodeoParaSerie.innerHTML = '<option value="">1. Seleccione a qué Rodeo pertenece la serie...</option>';
+                
+                // Mantenemos la opción de "Todos" en el filtro
+                const seleccionRodeoActual = filtroRodeoTabla.value;
+                filtroRodeoTabla.innerHTML = '<option value="TODOS">Todos los Rodeos</option>';
 
                 snapshot.forEach(d => {
                     const data = d.data();
-                    // Agregar a la lista visual
-                    contenedorRodeos.innerHTML += `
-                        <div class="item-lista">
-                            <div><strong>${data.nombre}</strong><br><span class="timer" data-inicio="${data.fechaApertura}">00:00:00</span></div>
-                            <button class="btn-cerrar" onclick="cerrarItem('rodeos', '${d.id}')">Cerrar</button>
-                        </div>`;
                     
-                    // Agregar al menú desplegable para crear series
-                    selectorRodeoParaSerie.innerHTML += `<option value="${data.nombre}">${data.nombre}</option>`;
+                    // Actualiza el filtro de la tabla con TODOS los rodeos históricos
+                    filtroRodeoTabla.innerHTML += `<option value="${data.nombre}">${data.nombre}</option>`;
+
+                    if(data.estado === "abierto") {
+                        contenedorRodeos.innerHTML += `
+                            <div class="item-lista">
+                                <div><strong>${data.nombre}</strong><br><span class="timer" data-inicio="${data.fechaApertura}">00:00:00</span></div>
+                                <button class="btn-cerrar" onclick="cerrarItem('rodeos', '${d.id}')">Cerrar</button>
+                            </div>`;
+                        selectorRodeoParaSerie.innerHTML += `<option value="${data.nombre}">${data.nombre}</option>`;
+                    }
                 });
+                filtroRodeoTabla.value = seleccionRodeoActual || "TODOS";
             });
 
-            // Escuchar Series Abiertas
-            onSnapshot(query(collection(db, "series"), where("estado", "==", "abierto")), (snapshot) => {
+            // Escuchar Series
+            onSnapshot(collection(db, "series"), (snapshot) => {
                 const contenedor = document.getElementById('listaSeries');
+                const filtroSerieTabla = document.getElementById('filtroSerieTabla');
+                
                 contenedor.innerHTML = '';
+                
+                const seleccionSerieActual = filtroSerieTabla.value;
+                filtroSerieTabla.innerHTML = '<option value="TODOS">Todas las Series</option>';
+
                 snapshot.forEach(d => {
                     const data = d.data();
-                    contenedor.innerHTML += `
-                        <div class="item-lista">
-                            <div>
-                                <strong>${data.nombre}</strong> <br>
-                                <span class="etiqueta-rodeo">Pertenece a: ${data.rodeoNombre}</span><br>
-                                <span class="timer" data-inicio="${data.fechaApertura}">00:00:00</span>
-                            </div>
-                            <button class="btn-cerrar" onclick="cerrarItem('series', '${d.id}')">Cerrar</button>
-                        </div>`;
+                    
+                    // Llenar filtro de la tabla
+                    filtroSerieTabla.innerHTML += `<option value="${data.nombre}">${data.nombre} (${data.rodeoNombre})</option>`;
+
+                    if(data.estado === "abierto") {
+                        contenedor.innerHTML += `
+                            <div class="item-lista">
+                                <div>
+                                    <strong>${data.nombre}</strong> <br>
+                                    <span class="etiqueta-rodeo">Pertenece a: ${data.rodeoNombre}</span><br>
+                                    <span class="timer" data-inicio="${data.fechaApertura}">00:00:00</span>
+                                </div>
+                                <button class="btn-cerrar" onclick="cerrarItem('series', '${d.id}')">Cerrar</button>
+                            </div>`;
+                    }
                 });
+                filtroSerieTabla.value = seleccionSerieActual || "TODOS";
             });
 
-            // Escuchar Inscripciones
+            // Escuchar TODAS las inscripciones y guardarlas en memoria
             onSnapshot(collection(db, "inscripciones"), (snapshot) => {
-                const tbody = document.querySelector('#tablaInscripciones tbody');
-                tbody.innerHTML = '';
                 inscripcionesGlobales = [];
                 snapshot.forEach(d => {
                     const ins = d.data();
+                    ins.id = d.id; // Guardamos el ID interno
                     inscripcionesGlobales.push(ins);
-                    tbody.innerHTML += `
-                        <tr>
-                            <td>${ins.rodeo}</td>
-                            <td>${ins.serie}</td>
-                            <td>${ins.nombre}</td>
-                            <td>${ins.companero}</td>
-                            <td>${ins.caballo}</td>
-                            <td>${ins.club}</td>
-                            <td>${ins.telefono}</td>
-                            <td><button class="btn-cerrar" onclick="borrarInscripcion('${d.id}')">Borrar</button></td>
-                        </tr>`;
                 });
+                renderizarTabla(); // Dibuja la tabla aplicando los filtros actuales
             });
         }
 
-        // Crear Rodeo
+        // NUEVO: Función para dibujar la tabla basándose en los filtros elegidos
+        window.renderizarTabla = function() {
+            const tbody = document.querySelector('#tablaInscripciones tbody');
+            tbody.innerHTML = '';
+            
+            const filtroRodeo = document.getElementById('filtroRodeoTabla').value;
+            const filtroSerie = document.getElementById('filtroSerieTabla').value;
+
+            inscripcionesGlobales.forEach(ins => {
+                // Si el jinete fue borrado ("eliminado"), no lo mostramos en pantalla (pero sigue en la base de datos)
+                if (ins.estado === "eliminado") return; 
+
+                // Aplicar filtros visuales
+                if (filtroRodeo !== "TODOS" && ins.rodeo !== filtroRodeo) return;
+                if (filtroSerie !== "TODOS" && ins.serie !== filtroSerie) return;
+
+                tbody.innerHTML += `
+                    <tr>
+                        <td>${ins.rodeo}</td>
+                        <td>${ins.serie}</td>
+                        <td>${ins.nombre}</td>
+                        <td>${ins.companero}</td>
+                        <td>${ins.caballo}</td>
+                        <td>${ins.club}</td>
+                        <td>${ins.telefono}</td>
+                        <td><button class="btn-cerrar" onclick="borrarSeguro('${ins.id}')">Borrar</button></td>
+                    </tr>`;
+            });
+        }
+
         window.crearRodeo = async function() {
             const nombre = document.getElementById('nuevoRodeo').value;
             if(!nombre) return alert("Escribe un nombre para el Rodeo");
-            
-            await addDoc(collection(db, "rodeos"), {
-                nombre: nombre,
-                estado: "abierto",
-                fechaApertura: Date.now()
-            });
+            await addDoc(collection(db, "rodeos"), { nombre: nombre, estado: "abierto", fechaApertura: Date.now() });
             document.getElementById('nuevoRodeo').value = '';
         };
 
-        // Crear Serie enlazada a un Rodeo
         window.crearSerie = async function() {
-            const rodeoSeleccionado = document.getElementById('rodeoParaSerie').value;
-            const nombreSerie = document.getElementById('nuevaSerie').value;
-            
-            if(!rodeoSeleccionado) return alert("Por favor, selecciona a qué Rodeo pertenece esta serie.");
-            if(!nombreSerie) return alert("Escribe un nombre para la Serie.");
-            
-            await addDoc(collection(db, "series"), {
-                nombre: nombreSerie,
-                rodeoNombre: rodeoSeleccionado,
-                estado: "abierto",
-                fechaApertura: Date.now()
-            });
+            const rodeo = document.getElementById('rodeoParaSerie').value;
+            const serie = document.getElementById('nuevaSerie').value;
+            if(!rodeo || !serie) return alert("Selecciona un Rodeo y escribe una Serie.");
+            await addDoc(collection(db, "series"), { nombre: serie, rodeoNombre: rodeo, estado: "abierto", fechaApertura: Date.now() });
             document.getElementById('nuevaSerie').value = '';
         };
 
         window.cerrarItem = async function(coleccion, id) {
-            if(confirm("¿Seguro que deseas cerrar esto? Ya no aparecerá en el formulario de los jinetes.")) {
+            if(confirm("¿Seguro que deseas cerrar esto? Ya no aparecerá a los jinetes.")) {
                 await updateDoc(doc(db, coleccion, id), { estado: "cerrado" });
             }
         };
 
-        window.borrarInscripcion = async function(id) {
-            if(confirm("¿Borrar esta inscripción permanentemente?")) {
-                await deleteDoc(doc(db, "inscripciones", id));
+        // NUEVO: Borrado Seguro (Soft Delete). Oculta el dato, pero no lo destruye.
+        window.borrarSeguro = async function(id) {
+            if(confirm("¿Seguro que deseas borrar a este jinete? (Quedará respaldado internamente en caso de error)")) {
+                await updateDoc(doc(db, "inscripciones", id), { estado: "eliminado" });
             }
         };
 
+        // NUEVO: Exportar a Excel respeta los filtros seleccionados
         window.exportarExcel = function() {
-            if(inscripcionesGlobales.length === 0) return alert("No hay datos");
-            const ws = XLSX.utils.json_to_sheet(inscripcionesGlobales);
+            const filtroRodeo = document.getElementById('filtroRodeoTabla').value;
+            const filtroSerie = document.getElementById('filtroSerieTabla').value;
+            
+            // Filtramos los datos exactos que el administrador está viendo en pantalla
+            const datosAExportar = inscripcionesGlobales.filter(ins => {
+                if (ins.estado === "eliminado") return false;
+                if (filtroRodeo !== "TODOS" && ins.rodeo !== filtroRodeo) return false;
+                if (filtroSerie !== "TODOS" && ins.serie !== filtroSerie) return false;
+                return true;
+            });
+
+            if(datosAExportar.length === 0) return alert("No hay datos para exportar con este filtro.");
+            
+            // Limpiamos los datos innecesarios antes de exportar
+            const datosLimpios = datosAExportar.map(ins => ({
+                Rodeo: ins.rodeo, Serie: ins.serie, Jinete: ins.nombre, 
+                Compañero: ins.companero, Caballo: ins.caballo, Club: ins.club, Teléfono: ins.telefono
+            }));
+
+            const ws = XLSX.utils.json_to_sheet(datosLimpios);
             const wb = XLSX.utils.book_new();
             XLSX.utils.book_append_sheet(wb, ws, "Inscripciones");
-            XLSX.writeFile(wb, "Base_Datos_Rodeo.xlsx");
+            
+            // Le ponemos el nombre al archivo según el filtro
+            let nombreArchivo = "Inscripciones";
+            if(filtroRodeo !== "TODOS") nombreArchivo += "_" + filtroRodeo;
+            nombreArchivo += ".xlsx";
+            
+            XLSX.writeFile(wb, nombreArchivo);
         };
 
         setInterval(() => {
