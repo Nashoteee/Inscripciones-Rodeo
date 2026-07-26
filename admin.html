@@ -26,7 +26,8 @@
         .btn-excel { background-color: #27ae60; color: white; border: none; font-weight: bold; cursor: pointer; margin-bottom: 15px;}
         
         .item-lista { display: flex; justify-content: space-between; align-items: center; background: #f8f9fa; padding: 10px; border: 1px solid #ddd; border-radius: 4px; margin-bottom: 10px; }
-        .timer { font-family: monospace; font-weight: bold; color: #d35400; font-size: 1.1em; background: #ffeaa7; padding: 3px 8px; border-radius: 4px;}
+        .timer { font-family: monospace; font-weight: bold; color: #27ae60; font-size: 1.1em; background: #e8f8f5; padding: 3px 8px; border-radius: 4px;}
+        .timer-countdown { font-family: monospace; font-weight: bold; color: #d35400; font-size: 1.1em; background: #ffeaa7; padding: 3px 8px; border-radius: 4px;}
         .etiqueta-rodeo { font-size: 12px; color: #7f8c8d; font-weight: bold; }
         
         /* Controles de Filtro */
@@ -40,7 +41,6 @@
 </head>
 <body>
 
-    <!-- Pantalla de Login -->
     <div class="login-screen" id="loginScreen">
         <h2>🔒 Panel de Control</h2>
         <p>Ingresa la contraseña de administrador</p>
@@ -48,7 +48,6 @@
         <button onclick="verificarPassword()">Ingresar</button>
     </div>
 
-    <!-- Panel de Control Principal -->
     <div class="admin-dashboard" id="adminDashboard">
         <h1>⚙️ Panel de Administración - Rodeo</h1>
 
@@ -69,17 +68,20 @@
                     <option value="">Cargando rodeos disponibles...</option>
                 </select>
                 <input type="text" id="nuevaSerie" placeholder="Nombre de la serie (Ej: Serie Potros)">
-                <button class="btn-crear" onclick="crearSerie()">+ Abrir Nueva Serie</button>
+                
+                <!-- NUEVO: Campo para establecer el tiempo límite -->
+                <input type="number" id="tiempoSerie" placeholder="Minutos que estará abierta (Ej: 120 para 2 horas)" min="1">
+                
+                <button class="btn-crear" onclick="crearSerie()">+ Abrir Nueva Serie con Temporizador</button>
                 <h4>Series Abiertas (Enlazadas a Rodeos):</h4>
                 <div id="listaSeries"></div>
             </div>
         </div>
 
-        <!-- Tabla de Inscripciones Mejorada -->
+        <!-- Tabla de Inscripciones -->
         <div class="card">
             <h3>📋 Base de Datos de Inscripciones</h3>
             
-            <!-- NUEVO: Filtros para separar la vista -->
             <div class="filtros-container">
                 <div style="flex: 1;">
                     <label style="font-size: 12px; font-weight: bold; color: #7f8c8d;">Filtrar por Rodeo:</label>
@@ -135,7 +137,8 @@
         const app = initializeApp(firebaseConfig);
         const db = getFirestore(app);
         
-        let inscripcionesGlobales = []; // Guarda todo el respaldo en memoria
+        let inscripcionesGlobales = [];
+        window.seriesCerrando = {}; // Evita múltiples llamadas de cierre automático
 
         window.verificarPassword = function() {
             if(document.getElementById('passInput').value === "rodeo2026") {
@@ -157,20 +160,17 @@
                 contenedorRodeos.innerHTML = '';
                 selectorRodeoParaSerie.innerHTML = '<option value="">1. Seleccione a qué Rodeo pertenece la serie...</option>';
                 
-                // Mantenemos la opción de "Todos" en el filtro
                 const seleccionRodeoActual = filtroRodeoTabla.value;
                 filtroRodeoTabla.innerHTML = '<option value="TODOS">Todos los Rodeos</option>';
 
                 snapshot.forEach(d => {
                     const data = d.data();
-                    
-                    // Actualiza el filtro de la tabla con TODOS los rodeos históricos
                     filtroRodeoTabla.innerHTML += `<option value="${data.nombre}">${data.nombre}</option>`;
 
                     if(data.estado === "abierto") {
                         contenedorRodeos.innerHTML += `
                             <div class="item-lista">
-                                <div><strong>${data.nombre}</strong><br><span class="timer" data-inicio="${data.fechaApertura}">00:00:00</span></div>
+                                <div><strong>${data.nombre}</strong><br><span class="timer" data-inicio="${data.fechaApertura}">Abierto hace: 00:00:00</span></div>
                                 <button class="btn-cerrar" onclick="cerrarItem('rodeos', '${d.id}')">Cerrar</button>
                             </div>`;
                         selectorRodeoParaSerie.innerHTML += `<option value="${data.nombre}">${data.nombre}</option>`;
@@ -185,14 +185,11 @@
                 const filtroSerieTabla = document.getElementById('filtroSerieTabla');
                 
                 contenedor.innerHTML = '';
-                
                 const seleccionSerieActual = filtroSerieTabla.value;
                 filtroSerieTabla.innerHTML = '<option value="TODOS">Todas las Series</option>';
 
                 snapshot.forEach(d => {
                     const data = d.data();
-                    
-                    // Llenar filtro de la tabla
                     filtroSerieTabla.innerHTML += `<option value="${data.nombre}">${data.nombre} (${data.rodeoNombre})</option>`;
 
                     if(data.estado === "abierto") {
@@ -201,28 +198,27 @@
                                 <div>
                                     <strong>${data.nombre}</strong> <br>
                                     <span class="etiqueta-rodeo">Pertenece a: ${data.rodeoNombre}</span><br>
-                                    <span class="timer" data-inicio="${data.fechaApertura}">00:00:00</span>
+                                    <span class="timer-countdown" data-cierre="${data.fechaCierre}" data-id="${d.id}">Calculando tiempo...</span>
                                 </div>
-                                <button class="btn-cerrar" onclick="cerrarItem('series', '${d.id}')">Cerrar</button>
+                                <button class="btn-cerrar" onclick="cerrarItem('series', '${d.id}')">Cerrar Ahora</button>
                             </div>`;
                     }
                 });
                 filtroSerieTabla.value = seleccionSerieActual || "TODOS";
             });
 
-            // Escuchar TODAS las inscripciones y guardarlas en memoria
+            // Escuchar Inscripciones
             onSnapshot(collection(db, "inscripciones"), (snapshot) => {
                 inscripcionesGlobales = [];
                 snapshot.forEach(d => {
                     const ins = d.data();
-                    ins.id = d.id; // Guardamos el ID interno
+                    ins.id = d.id;
                     inscripcionesGlobales.push(ins);
                 });
-                renderizarTabla(); // Dibuja la tabla aplicando los filtros actuales
+                renderizarTabla();
             });
         }
 
-        // NUEVO: Función para dibujar la tabla basándose en los filtros elegidos
         window.renderizarTabla = function() {
             const tbody = document.querySelector('#tablaInscripciones tbody');
             tbody.innerHTML = '';
@@ -231,10 +227,7 @@
             const filtroSerie = document.getElementById('filtroSerieTabla').value;
 
             inscripcionesGlobales.forEach(ins => {
-                // Si el jinete fue borrado ("eliminado"), no lo mostramos en pantalla (pero sigue en la base de datos)
                 if (ins.estado === "eliminado") return; 
-
-                // Aplicar filtros visuales
                 if (filtroRodeo !== "TODOS" && ins.rodeo !== filtroRodeo) return;
                 if (filtroSerie !== "TODOS" && ins.serie !== filtroSerie) return;
 
@@ -259,12 +252,28 @@
             document.getElementById('nuevoRodeo').value = '';
         };
 
+        // NUEVO: Lógica de creación de serie con cálculo de fecha de cierre
         window.crearSerie = async function() {
             const rodeo = document.getElementById('rodeoParaSerie').value;
             const serie = document.getElementById('nuevaSerie').value;
+            const minutos = parseInt(document.getElementById('tiempoSerie').value);
+            
             if(!rodeo || !serie) return alert("Selecciona un Rodeo y escribe una Serie.");
-            await addDoc(collection(db, "series"), { nombre: serie, rodeoNombre: rodeo, estado: "abierto", fechaApertura: Date.now() });
+            if(!minutos || minutos <= 0) return alert("Debes ingresar un tiempo válido en minutos.");
+            
+            const ahora = Date.now();
+            const fechaDeCierre = ahora + (minutos * 60 * 1000);
+
+            await addDoc(collection(db, "series"), { 
+                nombre: serie, 
+                rodeoNombre: rodeo, 
+                estado: "abierto", 
+                fechaApertura: ahora,
+                fechaCierre: fechaDeCierre // Guardamos el momento exacto en que debe morir
+            });
+            
             document.getElementById('nuevaSerie').value = '';
+            document.getElementById('tiempoSerie').value = '';
         };
 
         window.cerrarItem = async function(coleccion, id) {
@@ -273,19 +282,27 @@
             }
         };
 
-        // NUEVO: Borrado Seguro (Soft Delete). Oculta el dato, pero no lo destruye.
+        // Función silenciosa que cierra la serie cuando el tiempo se agota
+        window.cerrarItemAutomatico = async function(id) {
+            if(window.seriesCerrando[id]) return; // Previene que se envíe la orden múltiples veces
+            window.seriesCerrando[id] = true;
+            try {
+                await updateDoc(doc(db, "series", id), { estado: "cerrado" });
+            } catch(e) {
+                console.error("Error al cerrar automáticamente:", e);
+            }
+        }
+
         window.borrarSeguro = async function(id) {
             if(confirm("¿Seguro que deseas borrar a este jinete? (Quedará respaldado internamente en caso de error)")) {
                 await updateDoc(doc(db, "inscripciones", id), { estado: "eliminado" });
             }
         };
 
-        // NUEVO: Exportar a Excel respeta los filtros seleccionados
         window.exportarExcel = function() {
             const filtroRodeo = document.getElementById('filtroRodeoTabla').value;
             const filtroSerie = document.getElementById('filtroSerieTabla').value;
             
-            // Filtramos los datos exactos que el administrador está viendo en pantalla
             const datosAExportar = inscripcionesGlobales.filter(ins => {
                 if (ins.estado === "eliminado") return false;
                 if (filtroRodeo !== "TODOS" && ins.rodeo !== filtroRodeo) return false;
@@ -295,7 +312,6 @@
 
             if(datosAExportar.length === 0) return alert("No hay datos para exportar con este filtro.");
             
-            // Limpiamos los datos innecesarios antes de exportar
             const datosLimpios = datosAExportar.map(ins => ({
                 Rodeo: ins.rodeo, Serie: ins.serie, Jinete: ins.nombre, 
                 Compañero: ins.companero, Caballo: ins.caballo, Club: ins.club, Teléfono: ins.telefono
@@ -305,7 +321,6 @@
             const wb = XLSX.utils.book_new();
             XLSX.utils.book_append_sheet(wb, ws, "Inscripciones");
             
-            // Le ponemos el nombre al archivo según el filtro
             let nombreArchivo = "Inscripciones";
             if(filtroRodeo !== "TODOS") nombreArchivo += "_" + filtroRodeo;
             nombreArchivo += ".xlsx";
@@ -313,7 +328,9 @@
             XLSX.writeFile(wb, nombreArchivo);
         };
 
+        // Bucle que maneja los relojes en tiempo real (Progresivo y Regresivo)
         setInterval(() => {
+            // Reloj Progresivo (Para Rodeos)
             document.querySelectorAll('.timer').forEach(el => {
                 const inicio = parseInt(el.getAttribute('data-inicio'));
                 const dif = Date.now() - inicio;
@@ -322,7 +339,27 @@
                 segundos %= 3600;
                 let minutos = Math.floor(segundos / 60);
                 segundos %= 60;
-                el.innerText = `${horas}h ${minutos}m ${segundos}s`;
+                el.innerText = `Abierto hace: ${horas}h ${minutos}m ${segundos}s`;
+            });
+
+            // Reloj Regresivo (Para Series)
+            document.querySelectorAll('.timer-countdown').forEach(el => {
+                const cierre = parseInt(el.getAttribute('data-cierre'));
+                const id = el.getAttribute('data-id');
+                const dif = cierre - Date.now();
+
+                if (dif <= 0) {
+                    el.innerText = "Cerrando...";
+                    el.classList.remove('timer-countdown'); // Detiene el reloj
+                    cerrarItemAutomatico(id); // Dispara la acción en la base de datos
+                } else {
+                    let segundos = Math.floor(dif / 1000);
+                    let horas = Math.floor(segundos / 3600);
+                    segundos %= 3600;
+                    let minutos = Math.floor(segundos / 60);
+                    segundos %= 60;
+                    el.innerText = `⏳ Faltan: ${horas}h ${minutos}m ${segundos}s`;
+                }
             });
         }, 1000);
     </script>
