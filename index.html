@@ -4,51 +4,40 @@
     <meta charset="UTF-8">
     <meta name="viewport" content="width=device-width, initial-scale=1.0">
     <title>Inscripciones de Rodeo</title>
-    <!-- Librería para exportar a Excel -->
-    <script src="https://cdnjs.cloudflare.com/ajax/libs/xlsx/0.18.5/xlsx.full.min.js"></script>
     <style>
         body { font-family: 'Segoe UI', Tahoma, Geneva, Verdana, sans-serif; background-color: #f9f9f9; padding: 20px; color: #333; }
         .container { max-width: 900px; margin: auto; background: white; padding: 20px; border-radius: 8px; box-shadow: 0 4px 8px rgba(0,0,0,0.1); }
-        h1, h2, h3 { color: #2c3e50; text-align: center;}
+        h1, h2 { color: #2c3e50; text-align: center;}
         .section { margin-bottom: 30px; padding: 20px; border: 1px solid #e0e0e0; border-radius: 6px; background-color: #ffffff; }
         .form-group { margin-bottom: 15px; }
         label { font-weight: bold; display: block; margin-bottom: 5px; }
         input, select, button { width: 100%; padding: 10px; box-sizing: border-box; border-radius: 4px; border: 1px solid #ccc; font-size: 16px; }
         button { cursor: pointer; background-color: #27ae60; color: white; border: none; font-weight: bold; margin-top: 10px; transition: 0.3s; }
         button:hover { background-color: #219150; }
-        .btn-excel { background-color: #2980b9; }
-        .btn-excel:hover { background-color: #1f6391; }
-        .delete-btn { background-color: #c0392b; width: auto; padding: 5px 10px; font-size: 14px; }
-        .delete-btn:hover { background-color: #a5281b; }
-        table { width: 100%; border-collapse: collapse; margin-top: 15px; }
-        th, td { border: 1px solid #ddd; padding: 10px; text-align: left; }
-        th { background-color: #f4f4f4; }
-        .stats { background: #e8f4f8; padding: 10px; border-radius: 4px; margin-bottom: 15px; }
-        
-        /* Estilos del panel de control y mensajes de cierre */
-        .control-panel { background: #fff3cd; padding: 15px; border-radius: 6px; margin-bottom: 20px; border: 1px solid #ffe69c; }
         .mensaje-cerrado { display: none; background: #f8d7da; color: #721c24; padding: 20px; border-radius: 6px; text-align: center; border: 1px solid #f5c6cb; margin-bottom: 20px; }
-        
-        /* Ocultar panel de admin por defecto */
-        #panelAdministrador { display: none; }
-        .admin-login-btn { background-color: #7f8c8d; width: auto; padding: 5px 15px; display: block; margin: 30px auto 0; font-size: 14px; }
+        .admin-link { display: block; text-align: center; margin-top: 30px; color: #7f8c8d; text-decoration: none; font-size: 14px; }
     </style>
 </head>
 <body>
     <div class="container">
-        <h1>Sistema de Inscripciones de Rodeo</h1>
+        <h1>Sistema de Inscripciones</h1>
 
-        <!-- 1. Formulario de inscripción -->
         <div class="section" id="formulario">
-            <h2 id="tituloFormulario">1. Formulario de Inscripción</h2>
+            <h2>Formulario de Inscripción</h2>
             
             <div id="mensajeCerrado" class="mensaje-cerrado">
-                <h3>❌ Las inscripciones para este rodeo se encuentran actualmente CERRADAS.</h3>
+                <h3>❌ No hay rodeos abiertos en este momento.</h3>
                 <p>Comunícate con la administración para más información.</p>
             </div>
 
-            <div id="contenedorFormulario">
+            <div id="contenedorFormulario" style="display: none;">
                 <form id="registroForm">
+                    <div class="form-group">
+                        <label>Seleccione el Rodeo:</label>
+                        <select id="rodeo" required>
+                            <option value="">Cargando rodeos...</option>
+                        </select>
+                    </div>
                     <div class="form-group">
                         <input type="text" id="nombre" placeholder="Nombre del jinete" required>
                     </div>
@@ -59,22 +48,15 @@
                         <input type="tel" id="telefono" placeholder="Teléfono" required>
                     </div>
                     <div class="form-group">
-                        <input type="email" id="correo" placeholder="Correo (opcional)">
-                    </div>
-                    <div class="form-group">
                         <input type="text" id="club" placeholder="Asociación o club" required>
                     </div>
                     <div class="form-group">
                         <input type="text" id="caballo" placeholder="Nombre del caballo" required>
                     </div>
                     <div class="form-group">
+                        <label>Seleccione la Serie:</label>
                         <select id="serie" required>
-                            <option value="">Seleccione la Serie en la que participará...</option>
-                            <option value="Serie Criadores">Serie Criadores</option>
-                            <option value="Serie Caballos">Serie Caballos</option>
-                            <option value="Serie Yeguas">Serie Yeguas</option>
-                            <option value="Serie Potros">Serie Potros</option>
-                            <option value="Serie Libre">Serie Libre</option>
+                            <option value="">Cargando series...</option>
                         </select>
                     </div>
                     <div class="form-group">
@@ -84,62 +66,15 @@
                 </form>
             </div>
         </div>
-
-        <!-- Botón para abrir el panel oculto -->
-        <button class="admin-login-btn" onclick="loginAdmin()">🔑 Acceso Administrador</button>
-
-        <!-- 2. Panel de administración (OCULTO POR DEFECTO) -->
-        <div id="panelAdministrador">
-            <hr style="margin: 40px 0; border: 1px solid #ccc;">
-            <div class="section" id="admin">
-                <h2>2. Panel de Administración</h2>
-                
-                <div class="control-panel">
-                    <h3>⚙️ Control de Plataforma</h3>
-                    <p>Estado actual para los jinetes: <span id="textoEstado" style="font-weight:bold; color: green;">ABIERTAS</span></p>
-                    <button id="btnToggleEstado" onclick="cambiarEstadoManualmente()" style="background-color: #c0392b; width: auto; padding: 10px 20px;">Cerrar Inscripciones</button>
-                </div>
-
-                <input type="text" id="buscar" placeholder="Buscar por nombre de jinete o serie..." onkeyup="filtrarTabla()">
-                
-                <div class="stats" id="conteoSeries">
-                    <strong>Inscritos por serie: </strong> Cargando...
-                </div>
-
-                <div style="overflow-x: auto;">
-                    <table id="tablaInscripciones">
-                        <thead>
-                            <tr>
-                                <th>Serie</th>
-                                <th>Jinete</th>
-                                <th>Compañero</th>
-                                <th>Caballo</th>
-                                <th>Club</th>
-                                <th>Teléfono</th>
-                                <th>Acciones</th>
-                            </tr>
-                        </thead>
-                        <tbody>
-                            <!-- Las filas se cargarán desde Firebase -->
-                        </tbody>
-                    </table>
-                </div>
-            </div>
-
-            <!-- 3. Exportar a Excel -->
-            <div class="section" id="exportar">
-                <h2>3. Exportar Datos</h2>
-                <button class="btn-excel" onclick="exportarExcel()">Descargar a Excel</button>
-            </div>
-        </div>
+        
+        <!-- Enlace que abre el panel de control en una pestaña nueva -->
+        <a href="admin.html" target="_blank" class="admin-link">🔑 Acceso Administrador</a>
     </div>
 
-    <!-- Conexión a Firebase (Módulos) -->
     <script type="module">
         import { initializeApp } from "https://www.gstatic.com/firebasejs/10.12.2/firebase-app.js";
-        import { getFirestore, collection, addDoc, onSnapshot, deleteDoc, doc, setDoc } from "https://www.gstatic.com/firebasejs/10.12.2/firebase-firestore.js";
+        import { getFirestore, collection, addDoc, onSnapshot, query, where } from "https://www.gstatic.com/firebasejs/10.12.2/firebase-firestore.js";
 
-        // Tus llaves de Firebase (Configuración exacta proporcionada)
         const firebaseConfig = {
           apiKey: "AIzaSyCqtSOu4YemJGUb9dRG_7IDZZBL4E3yNsM",
           authDomain: "inscripciones-rodeos-909bb.firebaseapp.com",
@@ -152,177 +87,61 @@
         const app = initializeApp(firebaseConfig);
         const db = getFirestore(app);
 
-        let inscripcionesGlobales = [];
-        let estadoAbiertoGlobal = true;
+        const selectRodeo = document.getElementById('rodeo');
+        const selectSerie = document.getElementById('serie');
+        const formDiv = document.getElementById('contenedorFormulario');
+        const msjCerrado = document.getElementById('mensajeCerrado');
 
-        // 1. Escuchar el Estado (Abierto/Cerrado) en tiempo real
-        onSnapshot(doc(db, "configuracion", "estado"), (documento) => {
-            if (documento.exists()) {
-                estadoAbiertoGlobal = documento.data().abiertas;
-            } else {
-                // Si no existe, lo crea como abierto por defecto
-                setDoc(doc(db, "configuracion", "estado"), { abiertas: true });
-                estadoAbiertoGlobal = true;
-            }
-            actualizarUIEstado();
-        });
-
-        // 2. Escuchar las inscripciones en tiempo real
-        onSnapshot(collection(db, "inscripciones"), (snapshot) => {
-            inscripcionesGlobales = [];
-            snapshot.forEach((doc) => {
-                inscripcionesGlobales.push({ id: doc.id, ...doc.data() });
-            });
-            actualizarTablaAdmin();
-        });
-
-        // Actualizar visualmente si está abierto o cerrado
-        function actualizarUIEstado() {
-            const formDiv = document.getElementById('contenedorFormulario');
-            const msjCerrado = document.getElementById('mensajeCerrado');
-            const btnToggle = document.getElementById('btnToggleEstado');
-            const textoEstado = document.getElementById('textoEstado');
-
-            if(estadoAbiertoGlobal) {
-                formDiv.style.display = "block";
-                msjCerrado.style.display = "none";
-                if(btnToggle) {
-                    btnToggle.innerText = "Cerrar Inscripciones";
-                    btnToggle.style.backgroundColor = "#c0392b";
-                    textoEstado.innerText = "ABIERTAS";
-                    textoEstado.style.color = "green";
-                }
-            } else {
+        // Escuchar Rodeos Abiertos
+        const qRodeos = query(collection(db, "rodeos"), where("estado", "==", "abierto"));
+        onSnapshot(qRodeos, (snapshot) => {
+            selectRodeo.innerHTML = '<option value="">Seleccione el Rodeo...</option>';
+            if(snapshot.empty) {
                 formDiv.style.display = "none";
                 msjCerrado.style.display = "block";
-                if(btnToggle) {
-                    btnToggle.innerText = "Reabrir Inscripciones";
-                    btnToggle.style.backgroundColor = "#27ae60";
-                    textoEstado.innerText = "CERRADAS";
-                    textoEstado.style.color = "red";
-                }
+            } else {
+                formDiv.style.display = "block";
+                msjCerrado.style.display = "none";
+                snapshot.forEach(doc => {
+                    selectRodeo.innerHTML += `<option value="${doc.data().nombre}">${doc.data().nombre}</option>`;
+                });
             }
-        }
+        });
 
-        // Guardar nueva inscripción
+        // Escuchar Series Abiertas
+        const qSeries = query(collection(db, "series"), where("estado", "==", "abierto"));
+        onSnapshot(qSeries, (snapshot) => {
+            selectSerie.innerHTML = '<option value="">Seleccione la Serie...</option>';
+            snapshot.forEach(doc => {
+                selectSerie.innerHTML += `<option value="${doc.data().nombre}">${doc.data().nombre}</option>`;
+            });
+        });
+
+        // Guardar Inscripción
         document.getElementById('registroForm').addEventListener('submit', async function(e) {
             e.preventDefault();
-            if(!estadoAbiertoGlobal) {
-                alert("Las inscripciones están cerradas.");
-                return;
-            }
-            
             const btn = document.getElementById('btnRegistrar');
-            btn.innerText = "Guardando...";
-            btn.disabled = true;
+            btn.innerText = "Guardando..."; btn.disabled = true;
 
             try {
                 await addDoc(collection(db, "inscripciones"), {
+                    rodeo: document.getElementById('rodeo').value,
+                    serie: document.getElementById('serie').value,
                     nombre: document.getElementById('nombre').value,
                     rut: document.getElementById('rut').value,
                     telefono: document.getElementById('telefono').value,
-                    correo: document.getElementById('correo').value,
                     club: document.getElementById('club').value,
                     caballo: document.getElementById('caballo').value,
-                    serie: document.getElementById('serie').value,
                     companero: document.getElementById('companero').value,
-                    fecha: new Date().toISOString()
+                    fecha: Date.now()
                 });
                 alert("¡Inscripción guardada exitosamente!");
                 this.reset();
             } catch (error) {
                 alert("Error al guardar: " + error.message);
             }
-            
-            btn.innerText = "Registrar Inscripción";
-            btn.disabled = false;
+            btn.innerText = "Registrar Inscripción"; btn.disabled = false;
         });
-
-        // Lógica de tabla en panel admin
-        function actualizarTablaAdmin() {
-            const tbody = document.querySelector('#tablaInscripciones tbody');
-            tbody.innerHTML = '';
-            let conteo = {};
-
-            inscripcionesGlobales.forEach(ins => {
-                conteo[ins.serie] = (conteo[ins.serie] || 0) + 1;
-                const tr = document.createElement('tr');
-                tr.innerHTML = `
-                    <td>${ins.serie}</td>
-                    <td>${ins.nombre}</td>
-                    <td>${ins.companero}</td>
-                    <td>${ins.caballo}</td>
-                    <td>${ins.club}</td>
-                    <td>${ins.telefono}</td>
-                    <td><button onclick="eliminarDesdeFirebase('${ins.id}')" class="delete-btn">Eliminar</button></td>
-                `;
-                tbody.appendChild(tr);
-            });
-
-            let conteoHtml = "<strong>Inscritos por serie:</strong><br>";
-            if(Object.keys(conteo).length === 0) {
-                conteoHtml += "No hay inscripciones aún.";
-            } else {
-                for (let s in conteo) {
-                    conteoHtml += `• ${s}: ${conteo[s]} inscrito(s)<br>`;
-                }
-            }
-            document.getElementById('conteoSeries').innerHTML = conteoHtml;
-        }
-
-        // Funciones accesibles globalmente desde el HTML
-        window.loginAdmin = function() {
-            const pass = prompt("Ingresa la contraseña de administrador:");
-            // CONTRASEÑA POR DEFECTO: rodeo2026
-            if (pass === "rodeo2026") {
-                document.getElementById('panelAdministrador').style.display = "block";
-                alert("Acceso concedido.");
-            } else if (pass !== null) {
-                alert("Contraseña incorrecta.");
-            }
-        };
-
-        window.cambiarEstadoManualmente = async function() {
-            const nuevoEstado = !estadoAbiertoGlobal;
-            try {
-                await setDoc(doc(db, "configuracion", "estado"), { abiertas: nuevoEstado });
-            } catch(e) {
-                alert("Error al cambiar estado: " + e.message);
-            }
-        };
-
-        window.eliminarDesdeFirebase = async function(idDocumento) {
-            if(confirm("¿Seguro que deseas eliminar esta inscripción definitivamente?")) {
-                try {
-                    await deleteDoc(doc(db, "inscripciones", idDocumento));
-                } catch(e) {
-                    alert("Error al eliminar: " + e.message);
-                }
-            }
-        };
-
-        window.exportarExcel = function() {
-            if(inscripcionesGlobales.length === 0) {
-                alert("No hay datos para exportar.");
-                return;
-            }
-            const datosExportar = inscripcionesGlobales.map(ins => ({
-                Serie: ins.serie, Jinete: ins.nombre, Compañero: ins.companero,
-                Caballo: ins.caballo, Club: ins.club, Teléfono: ins.telefono
-            }));
-            const ws = XLSX.utils.json_to_sheet(datosExportar);
-            const wb = XLSX.utils.book_new();
-            XLSX.utils.book_append_sheet(wb, ws, "Rodeo");
-            XLSX.writeFile(wb, "Inscripciones_Rodeo.xlsx");
-        };
-
-        window.filtrarTabla = function() {
-            const filtro = document.getElementById('buscar').value.toLowerCase();
-            const filas = document.querySelectorAll('#tablaInscripciones tbody tr');
-            filas.forEach(fila => {
-                fila.style.display = fila.innerText.toLowerCase().includes(filtro) ? '' : 'none';
-            });
-        };
     </script>
 </body>
 </html>
