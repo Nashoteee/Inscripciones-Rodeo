@@ -104,9 +104,8 @@
         
         let unsubscribeSeries = null; 
         let cronometroInterval = null;
-        let totalJinetes = 0; // Contador de jinetes
+        let totalJinetes = 0;
 
-        // Función para inyectar HTML de un jinete nuevo
         function generarBloqueJinete(num) {
             return `
             <div class="jinete-bloque" id="bloqueJinete${num}">
@@ -120,7 +119,6 @@
             </div>`;
         }
 
-        // Inicializar con 1 jinete
         function agregarJinete() {
             if(totalJinetes >= 10) return alert("El máximo permitido es de 10 jinetes por inscripción.");
             totalJinetes++;
@@ -206,7 +204,6 @@
             btnRegistrar.innerText = "Guardando..."; btnRegistrar.disabled = true;
 
             try {
-                // Recopilar datos dinámicos
                 let datosAguardar = {
                     rodeo: document.getElementById('rodeo').value,
                     serie: document.getElementById('serie').value,
