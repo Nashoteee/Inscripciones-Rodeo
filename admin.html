@@ -22,8 +22,10 @@
         input, select, button { padding: 10px; margin-bottom: 10px; border-radius: 4px; border: 1px solid #ccc; width: 100%; box-sizing: border-box; }
         .btn-crear { background-color: #2980b9; color: white; font-weight: bold; border: none; cursor: pointer; }
         .btn-crear:hover { background-color: #1f6391; }
-        .btn-cerrar { background-color: #e74c3c; color: white; border: none; padding: 5px 10px; cursor: pointer; border-radius: 4px; margin-top: 5px;}
+        .btn-cerrar { background-color: #e74c3c; color: white; border: none; padding: 5px 10px; cursor: pointer; border-radius: 4px; margin-top: 5px; width: 100%;}
         .btn-excel { background-color: #27ae60; color: white; border: none; font-weight: bold; cursor: pointer; margin-bottom: 15px;}
+        .btn-pago { background-color: #f1c40f; color: #2c3e50; font-weight: bold; padding: 5px 10px; border-radius: 4px; text-decoration: none; display: inline-block; width: 100%; box-sizing: border-box; text-align: center; margin-bottom: 5px; border: none; font-size: 14px;}
+        .btn-pago:hover { background-color: #f39c12; }
         
         .item-lista { display: flex; justify-content: space-between; align-items: center; background: #f8f9fa; padding: 10px; border: 1px solid #ddd; border-radius: 4px; margin-bottom: 10px; }
         .timer { font-family: monospace; font-weight: bold; color: #27ae60; font-size: 1.1em; background: #e8f8f5; padding: 3px 8px; border-radius: 4px;}
@@ -40,6 +42,7 @@
         .jinete-fila { border-bottom: 1px dashed #ccc; padding-bottom: 5px; margin-bottom: 5px; }
         .jinete-fila:last-child { border-bottom: none; margin-bottom: 0; padding-bottom: 0; }
         .meta-info { font-size: 12px; color: #7f8c8d; display: block;}
+        .acciones-col { width: 100px; }
     </style>
 </head>
 <body>
@@ -100,7 +103,7 @@
                         <tr>
                             <th>Serie / Rodeo</th>
                             <th>Jinetes Inscritos en este Equipo (Max 10)</th>
-                            <th>Acción</th>
+                            <th class="acciones-col">Acción</th>
                         </tr>
                     </thead>
                     <tbody>
@@ -139,7 +142,6 @@
         };
 
         function iniciarBaseDeDatos() {
-            // Rodeos
             onSnapshot(collection(db, "rodeos"), (snapshot) => {
                 const contenedorRodeos = document.getElementById('listaRodeos');
                 const selectorRodeoParaSerie = document.getElementById('rodeoParaSerie');
@@ -157,7 +159,7 @@
                         contenedorRodeos.innerHTML += `
                             <div class="item-lista">
                                 <div><strong>${data.nombre}</strong><br><span class="timer" data-inicio="${data.fechaApertura}">Abierto hace: 00:00:00</span></div>
-                                <button class="btn-cerrar" onclick="cerrarItem('rodeos', '${d.id}')">Cerrar</button>
+                                <button class="btn-cerrar" style="width:auto; margin-top:0;" onclick="cerrarItem('rodeos', '${d.id}')">Cerrar</button>
                             </div>`;
                         selectorRodeoParaSerie.innerHTML += `<option value="${data.nombre}">${data.nombre}</option>`;
                     }
@@ -165,7 +167,6 @@
                 filtroRodeoTabla.value = seleccionRodeoActual || "TODOS";
             });
 
-            // Series
             onSnapshot(collection(db, "series"), (snapshot) => {
                 const contenedor = document.getElementById('listaSeries');
                 const filtroSerieTabla = document.getElementById('filtroSerieTabla');
@@ -184,14 +185,13 @@
                                     <span class="etiqueta-rodeo">Pertenece a: ${data.rodeoNombre}</span><br>
                                     <span class="timer-countdown" data-cierre="${data.fechaCierre}" data-id="${d.id}">Calculando tiempo...</span>
                                 </div>
-                                <button class="btn-cerrar" onclick="cerrarItem('series', '${d.id}')">Cerrar Ahora</button>
+                                <button class="btn-cerrar" style="width:auto; margin-top:0;" onclick="cerrarItem('series', '${d.id}')">Cerrar</button>
                             </div>`;
                     }
                 });
                 filtroSerieTabla.value = seleccionSerieActual || "TODOS";
             });
 
-            // Inscripciones
             onSnapshot(collection(db, "inscripciones"), (snapshot) => {
                 inscripcionesGlobales = [];
                 snapshot.forEach(d => {
@@ -232,11 +232,22 @@
                     }
                 }
 
+                // NUEVO: Mostrar botón de pago si existe la URL
+                let botonPagoHTML = "";
+                if(ins.comprobanteUrl) {
+                    botonPagoHTML = `<a href="${ins.comprobanteUrl}" target="_blank" class="btn-pago">👁️ Ver Pago</a>`;
+                } else {
+                    botonPagoHTML = `<span class="meta-info" style="color:#e74c3c; margin-bottom:5px; display:block; text-align:center;">Sin pago</span>`;
+                }
+
                 tbody.innerHTML += `
                     <tr>
                         <td><strong>${ins.serie}</strong><br><span class="meta-info">${ins.rodeo}</span></td>
                         <td>${jinetesHTML}</td>
-                        <td><button class="btn-cerrar" onclick="borrarSeguro('${ins.id}')">Borrar</button></td>
+                        <td class="acciones-col">
+                            ${botonPagoHTML}
+                            <button class="btn-cerrar" onclick="borrarSeguro('${ins.id}')">Borrar</button>
+                        </td>
                     </tr>`;
             });
         }
@@ -274,12 +285,10 @@
             if(confirm("¿Borrar a este equipo de la pantalla?")) await updateDoc(doc(db, "inscripciones", id), { estado: "eliminado" });
         };
 
-        // Generador de EXCEL Optimizado y Profesional
         window.exportarExcel = function() {
             const filtroRodeo = document.getElementById('filtroRodeoTabla').value;
             const filtroSerie = document.getElementById('filtroSerieTabla').value;
             
-            // 1. Filtrar los datos según lo que se ve en pantalla
             const datosAExportar = inscripcionesGlobales.filter(ins => {
                 if (ins.estado === "eliminado") return false;
                 if (filtroRodeo !== "TODOS" && ins.rodeo !== filtroRodeo) return false;
@@ -289,21 +298,19 @@
 
             if(datosAExportar.length === 0) return alert("No hay datos para exportar con este filtro.");
             
-            // 2. Descubrir cuál es el número MÁXIMO de jinetes reales en esta exportación
             let maxJinetesExportacion = 1;
             datosAExportar.forEach(ins => {
                 let cantidad = ins.cantidadJinetes || (ins.jinete2 ? 2 : 1);
                 if(cantidad > maxJinetesExportacion) maxJinetesExportacion = cantidad;
             });
 
-            // 3. Limpiar y estructurar los datos uniformemente
             const datosLimpios = datosAExportar.map(ins => {
                 let filaExcel = {
                     "Rodeo": ins.rodeo,
-                    "Serie": ins.serie
+                    "Serie": ins.serie,
+                    "Link Comprobante de Pago": ins.comprobanteUrl || 'No adjunto' // Agregamos la URL al Excel
                 };
                 
-                // Forzamos a que todas las filas tengan las mismas columnas exactas
                 for(let i = 1; i <= maxJinetesExportacion; i++) {
                     filaExcel[`Jinete ${i} - Nombre`] = ins[`jinete${i}`] || '-';
                     filaExcel[`Jinete ${i} - RUT`] = ins[`rut${i}`] || '-';
@@ -317,13 +324,12 @@
 
             const ws = XLSX.utils.json_to_sheet(datosLimpios);
 
-            // 4. Optimizar el ancho de las columnas (Estética del Excel)
             let anchosColumnas = [
-                {wch: 22}, // Ancho para Rodeo
-                {wch: 20}  // Ancho para Serie
+                {wch: 22}, // Rodeo
+                {wch: 20}, // Serie
+                {wch: 40}  // Link Pago
             ];
             
-            // Multiplicamos los anchos por la cantidad de jinetes que haya
             for(let i = 1; i <= maxJinetesExportacion; i++) {
                 anchosColumnas.push({wch: 25}); // Nombre
                 anchosColumnas.push({wch: 15}); // RUT
@@ -334,7 +340,6 @@
             }
             ws['!cols'] = anchosColumnas;
 
-            // 5. Crear archivo y descargar
             const wb = XLSX.utils.book_new();
             XLSX.utils.book_append_sheet(wb, ws, "Inscripciones");
             
