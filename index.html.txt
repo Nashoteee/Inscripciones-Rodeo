@@ -1,0 +1,221 @@
+<!DOCTYPE html>
+<html lang="es">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Inscripciones de Rodeo</title>
+    <!-- Librería SheetJS para generar el archivo Excel desde el navegador -->
+    <script src="https://cdnjs.cloudflare.com/ajax/libs/xlsx/0.18.5/xlsx.full.min.js"></script>
+    <style>
+        body { font-family: 'Segoe UI', Tahoma, Geneva, Verdana, sans-serif; background-color: #f9f9f9; padding: 20px; color: #333; }
+        .container { max-width: 900px; margin: auto; background: white; padding: 20px; border-radius: 8px; box-shadow: 0 4px 8px rgba(0,0,0,0.1); }
+        h1, h2 { color: #2c3e50; }
+        .section { margin-bottom: 30px; padding: 20px; border: 1px solid #e0e0e0; border-radius: 6px; background-color: #ffffff; }
+        .form-group { margin-bottom: 15px; }
+        label { font-weight: bold; display: block; margin-bottom: 5px; }
+        input, select, button { width: 100%; padding: 10px; box-sizing: border-box; border-radius: 4px; border: 1px solid #ccc; font-size: 16px; }
+        button { cursor: pointer; background-color: #27ae60; color: white; border: none; font-weight: bold; margin-top: 10px; }
+        button:hover { background-color: #219150; }
+        .btn-excel { background-color: #2980b9; }
+        .btn-excel:hover { background-color: #1f6391; }
+        .delete-btn { background-color: #c0392b; width: auto; padding: 5px 10px; font-size: 14px; }
+        .delete-btn:hover { background-color: #a5281b; }
+        table { width: 100%; border-collapse: collapse; margin-top: 15px; }
+        th, td { border: 1px solid #ddd; padding: 10px; text-align: left; }
+        th { background-color: #f4f4f4; }
+        .stats { background: #e8f4f8; padding: 10px; border-radius: 4px; margin-bottom: 15px; }
+    </style>
+</head>
+<body>
+    <div class="container">
+        <h1>Sistema de Inscripciones de Rodeo</h1>
+
+        <!-- 1. Formulario de inscripción -->
+        <div class="section" id="formulario">
+            <h2>1. Formulario de Inscripción</h2>
+            <form id="registroForm">
+                <div class="form-group">
+                    <input type="text" id="nombre" placeholder="Nombre del jinete" required>
+                </div>
+                <div class="form-group">
+                    <input type="text" id="rut" placeholder="RUT" required>
+                </div>
+                <div class="form-group">
+                    <input type="tel" id="telefono" placeholder="Teléfono" required>
+                </div>
+                <div class="form-group">
+                    <input type="email" id="correo" placeholder="Correo (opcional)">
+                </div>
+                <div class="form-group">
+                    <input type="text" id="club" placeholder="Asociación o club" required>
+                </div>
+                <div class="form-group">
+                    <input type="text" id="caballo" placeholder="Nombre del caballo" required>
+                </div>
+                <div class="form-group">
+                    <select id="serie" required>
+                        <option value="">Seleccione la Serie en la que participará...</option>
+                        <option value="Serie Criadores">Serie Criadores</option>
+                        <option value="Serie Caballos">Serie Caballos</option>
+                        <option value="Serie Yeguas">Serie Yeguas</option>
+                        <option value="Serie Potros">Serie Potros</option>
+                        <option value="Serie Libre">Serie Libre</option>
+                    </select>
+                </div>
+                <div class="form-group">
+                    <input type="text" id="companero" placeholder="Compañero de collera" required>
+                </div>
+                <div class="form-group">
+                    <label>Comprobante de pago (opcional):</label>
+                    <input type="file" id="comprobante" accept="image/*,.pdf">
+                </div>
+                <button type="submit">Registrar Inscripción</button>
+            </form>
+        </div>
+
+        <!-- 2. Panel de administración -->
+        <div class="section" id="admin">
+            <h2>2. Panel de Administración</h2>
+            <input type="text" id="buscar" placeholder="Buscar por nombre de jinete o serie..." onkeyup="filtrarTabla()">
+            
+            <div class="stats" id="conteoSeries">
+                <strong>Inscritos por serie: </strong> No hay inscripciones aún.
+            </div>
+
+            <table id="tablaInscripciones">
+                <thead>
+                    <tr>
+                        <th>Serie</th>
+                        <th>Jinete</th>
+                        <th>Compañero</th>
+                        <th>Caballo</th>
+                        <th>Club</th>
+                        <th>Teléfono</th>
+                        <th>Acciones</th>
+                    </tr>
+                </thead>
+                <tbody>
+                    <!-- Filas dinámicas -->
+                </tbody>
+            </table>
+        </div>
+
+        <!-- 3. Exportar a Excel -->
+        <div class="section" id="exportar">
+            <h2>3. Exportar Datos</h2>
+            <p>Genera un archivo con las columnas: Serie, Jinete, Compañero, Caballo, Club y Teléfono.</p>
+            <button class="btn-excel" onclick="exportarExcel()">Descargar a Excel</button>
+        </div>
+    </div>
+
+    <script>
+        // Array para almacenar las inscripciones temporalmente
+        let inscripciones = [];
+
+        // Lógica del Formulario
+        document.getElementById('registroForm').addEventListener('submit', function(e) {
+            e.preventDefault();
+            
+            const nuevaInscripcion = {
+                id: Date.now(), // Identificador único
+                nombre: document.getElementById('nombre').value,
+                rut: document.getElementById('rut').value,
+                telefono: document.getElementById('telefono').value,
+                correo: document.getElementById('correo').value,
+                club: document.getElementById('club').value,
+                caballo: document.getElementById('caballo').value,
+                serie: document.getElementById('serie').value,
+                companero: document.getElementById('companero').value
+            };
+
+            inscripciones.push(nuevaInscripcion);
+            actualizarTabla();
+            this.reset(); // Limpia el formulario
+            alert("¡Inscripción guardada correctamente!");
+        });
+
+        // Lógica del Panel de Administración (Tabla y Conteos)
+        function actualizarTabla() {
+            const tbody = document.querySelector('#tablaInscripciones tbody');
+            tbody.innerHTML = '';
+            let conteo = {};
+
+            inscripciones.forEach(ins => {
+                // Registrar conteos por serie
+                conteo[ins.serie] = (conteo[ins.serie] || 0) + 1;
+
+                // Crear fila en la tabla
+                const tr = document.createElement('tr');
+                tr.innerHTML = `
+                    <td>${ins.serie}</td>
+                    <td>${ins.nombre}</td>
+                    <td>${ins.companero}</td>
+                    <td>${ins.caballo}</td>
+                    <td>${ins.club}</td>
+                    <td>${ins.telefono}</td>
+                    <td>
+                        <button onclick="eliminarInscripcion(${ins.id})" class="delete-btn">Eliminar</button>
+                    </td>
+                `;
+                tbody.appendChild(tr);
+            });
+
+            // Actualizar panel de conteo por serie
+            let conteoHtml = "<strong>Inscritos por serie:</strong><br>";
+            if(Object.keys(conteo).length === 0) {
+                conteoHtml += "No hay inscripciones aún.";
+            } else {
+                for (let s in conteo) {
+                    conteoHtml += `• ${s}: ${conteo[s]} inscrito(s)<br>`;
+                }
+            }
+            document.getElementById('conteoSeries').innerHTML = conteoHtml;
+        }
+
+        // Lógica para Eliminar
+        function eliminarInscripcion(id) {
+            if(confirm("¿Estás seguro de eliminar esta inscripción?")) {
+                inscripciones = inscripciones.filter(ins => ins.id !== id);
+                actualizarTabla();
+            }
+        }
+
+        // Lógica para Buscar/Filtrar
+        function filtrarTabla() {
+            const filtro = document.getElementById('buscar').value.toLowerCase();
+            const filas = document.querySelectorAll('#tablaInscripciones tbody tr');
+            filas.forEach(fila => {
+                // Filtramos por todo el texto de la fila (nombre, serie, etc.)
+                const texto = fila.innerText.toLowerCase();
+                fila.style.display = texto.includes(filtro) ? '' : 'none';
+            });
+        }
+
+        // Lógica para Exportar a Excel
+        function exportarExcel() {
+            if(inscripciones.length === 0) {
+                alert("No hay datos para exportar.");
+                return;
+            }
+
+            // Mapeamos los datos para tener solo las columnas solicitadas
+            const datosExportar = inscripciones.map(ins => ({
+                Serie: ins.serie,
+                Jinete: ins.nombre,
+                Compañero: ins.companero,
+                Caballo: ins.caballo,
+                Club: ins.club,
+                Teléfono: ins.telefono
+            }));
+            
+            // Usamos SheetJS para construir el archivo
+            const ws = XLSX.utils.json_to_sheet(datosExportar);
+            const wb = XLSX.utils.book_new();
+            XLSX.utils.book_append_sheet(wb, ws, "Inscripciones");
+            
+            // Descargar archivo
+            XLSX.writeFile(wb, "Inscripciones_Rodeo.xlsx");
+        }
+    </script>
+</body>
+</html>
