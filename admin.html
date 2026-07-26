@@ -22,7 +22,7 @@
         input, select, button { padding: 10px; margin-bottom: 10px; border-radius: 4px; border: 1px solid #ccc; width: 100%; box-sizing: border-box; }
         .btn-crear { background-color: #2980b9; color: white; font-weight: bold; border: none; cursor: pointer; }
         .btn-crear:hover { background-color: #1f6391; }
-        .btn-cerrar { background-color: #e74c3c; color: white; border: none; padding: 5px 10px; cursor: pointer; border-radius: 4px; }
+        .btn-cerrar { background-color: #e74c3c; color: white; border: none; padding: 5px 10px; cursor: pointer; border-radius: 4px; margin-top: 5px;}
         .btn-excel { background-color: #27ae60; color: white; border: none; font-weight: bold; cursor: pointer; margin-bottom: 15px;}
         
         .item-lista { display: flex; justify-content: space-between; align-items: center; background: #f8f9fa; padding: 10px; border: 1px solid #ddd; border-radius: 4px; margin-bottom: 10px; }
@@ -30,13 +30,16 @@
         .timer-countdown { font-family: monospace; font-weight: bold; color: #d35400; font-size: 1.1em; background: #ffeaa7; padding: 3px 8px; border-radius: 4px;}
         .etiqueta-rodeo { font-size: 12px; color: #7f8c8d; font-weight: bold; }
         
-        /* Controles de Filtro */
         .filtros-container { display: flex; gap: 10px; background: #ecf0f1; padding: 15px; border-radius: 6px; margin-bottom: 15px; border: 1px solid #bdc3c7;}
         .filtros-container select { margin-bottom: 0; }
         
         table { width: 100%; border-collapse: collapse; margin-top: 15px; font-size: 14px; }
-        th, td { border: 1px solid #ddd; padding: 8px; text-align: left; }
+        th, td { border: 1px solid #ddd; padding: 10px; text-align: left; vertical-align: top;}
         th { background-color: #f4f4f4; color: #333;}
+        
+        .jinete-fila { border-bottom: 1px dashed #ccc; padding-bottom: 5px; margin-bottom: 5px; }
+        .jinete-fila:last-child { border-bottom: none; margin-bottom: 0; padding-bottom: 0; }
+        .meta-info { font-size: 12px; color: #7f8c8d; display: block;}
     </style>
 </head>
 <body>
@@ -52,33 +55,25 @@
         <h1>⚙️ Panel de Administración - Rodeo</h1>
 
         <div class="flex-grid">
-            <!-- Columna Rodeos -->
             <div class="col card">
                 <h3>🤠 Gestión de Rodeos</h3>
-                <input type="text" id="nuevoRodeo" placeholder="Nombre del nuevo rodeo (Ej: Rodeo Santa Elena)">
+                <input type="text" id="nuevoRodeo" placeholder="Nombre del nuevo rodeo">
                 <button class="btn-crear" onclick="crearRodeo()">+ Abrir Nuevo Rodeo</button>
                 <h4>Rodeos Abiertos (Activos):</h4>
                 <div id="listaRodeos"></div>
             </div>
 
-            <!-- Columna Series -->
             <div class="col card">
                 <h3>🐎 Gestión de Series</h3>
-                <select id="rodeoParaSerie">
-                    <option value="">Cargando rodeos disponibles...</option>
-                </select>
-                <input type="text" id="nuevaSerie" placeholder="Nombre de la serie (Ej: Serie Potros)">
-                
-                <!-- NUEVO: Campo para establecer el tiempo límite -->
-                <input type="number" id="tiempoSerie" placeholder="Minutos que estará abierta (Ej: 120 para 2 horas)" min="1">
-                
+                <select id="rodeoParaSerie"><option value="">Cargando...</option></select>
+                <input type="text" id="nuevaSerie" placeholder="Nombre de la serie">
+                <input type="number" id="tiempoSerie" placeholder="Minutos que estará abierta" min="1">
                 <button class="btn-crear" onclick="crearSerie()">+ Abrir Nueva Serie con Temporizador</button>
-                <h4>Series Abiertas (Enlazadas a Rodeos):</h4>
+                <h4>Series Abiertas:</h4>
                 <div id="listaSeries"></div>
             </div>
         </div>
 
-        <!-- Tabla de Inscripciones -->
         <div class="card">
             <h3>📋 Base de Datos de Inscripciones</h3>
             
@@ -97,19 +92,14 @@
                 </div>
             </div>
 
-            <button class="btn-excel" onclick="exportarExcel()">📥 Descargar a Excel (Aplica filtros)</button>
+            <button class="btn-excel" onclick="exportarExcel()">📥 Descargar a Excel</button>
             
             <div style="overflow-x: auto;">
                 <table id="tablaInscripciones">
                     <thead>
                         <tr>
-                            <th>Rodeo</th>
-                            <th>Serie</th>
-                            <th>Jinete</th>
-                            <th>Compañero</th>
-                            <th>Caballo</th>
-                            <th>Club</th>
-                            <th>Teléfono</th>
+                            <th>Serie / Rodeo</th>
+                            <th>Jinetes Inscritos en este Equipo (Max 10)</th>
                             <th>Acción</th>
                         </tr>
                     </thead>
@@ -138,20 +128,18 @@
         const db = getFirestore(app);
         
         let inscripcionesGlobales = [];
-        window.seriesCerrando = {}; // Evita múltiples llamadas de cierre automático
+        window.seriesCerrando = {}; 
 
         window.verificarPassword = function() {
             if(document.getElementById('passInput').value === "rodeo2026") {
                 document.getElementById('loginScreen').style.display = "none";
                 document.getElementById('adminDashboard').style.display = "block";
                 iniciarBaseDeDatos();
-            } else {
-                alert("Contraseña incorrecta");
-            }
+            } else { alert("Contraseña incorrecta"); }
         };
 
         function iniciarBaseDeDatos() {
-            // Escuchar Rodeos
+            // Rodeos
             onSnapshot(collection(db, "rodeos"), (snapshot) => {
                 const contenedorRodeos = document.getElementById('listaRodeos');
                 const selectorRodeoParaSerie = document.getElementById('rodeoParaSerie');
@@ -159,14 +147,12 @@
                 
                 contenedorRodeos.innerHTML = '';
                 selectorRodeoParaSerie.innerHTML = '<option value="">1. Seleccione a qué Rodeo pertenece la serie...</option>';
-                
                 const seleccionRodeoActual = filtroRodeoTabla.value;
                 filtroRodeoTabla.innerHTML = '<option value="TODOS">Todos los Rodeos</option>';
 
                 snapshot.forEach(d => {
                     const data = d.data();
                     filtroRodeoTabla.innerHTML += `<option value="${data.nombre}">${data.nombre}</option>`;
-
                     if(data.estado === "abierto") {
                         contenedorRodeos.innerHTML += `
                             <div class="item-lista">
@@ -179,11 +165,10 @@
                 filtroRodeoTabla.value = seleccionRodeoActual || "TODOS";
             });
 
-            // Escuchar Series
+            // Series
             onSnapshot(collection(db, "series"), (snapshot) => {
                 const contenedor = document.getElementById('listaSeries');
                 const filtroSerieTabla = document.getElementById('filtroSerieTabla');
-                
                 contenedor.innerHTML = '';
                 const seleccionSerieActual = filtroSerieTabla.value;
                 filtroSerieTabla.innerHTML = '<option value="TODOS">Todas las Series</option>';
@@ -191,7 +176,6 @@
                 snapshot.forEach(d => {
                     const data = d.data();
                     filtroSerieTabla.innerHTML += `<option value="${data.nombre}">${data.nombre} (${data.rodeoNombre})</option>`;
-
                     if(data.estado === "abierto") {
                         contenedor.innerHTML += `
                             <div class="item-lista">
@@ -207,7 +191,7 @@
                 filtroSerieTabla.value = seleccionSerieActual || "TODOS";
             });
 
-            // Escuchar Inscripciones
+            // Inscripciones
             onSnapshot(collection(db, "inscripciones"), (snapshot) => {
                 inscripcionesGlobales = [];
                 snapshot.forEach(d => {
@@ -222,7 +206,6 @@
         window.renderizarTabla = function() {
             const tbody = document.querySelector('#tablaInscripciones tbody');
             tbody.innerHTML = '';
-            
             const filtroRodeo = document.getElementById('filtroRodeoTabla').value;
             const filtroSerie = document.getElementById('filtroSerieTabla').value;
 
@@ -231,15 +214,29 @@
                 if (filtroRodeo !== "TODOS" && ins.rodeo !== filtroRodeo) return;
                 if (filtroSerie !== "TODOS" && ins.serie !== filtroSerie) return;
 
+                // Generar lista de jinetes de forma dinámica
+                let jinetesHTML = "";
+                let maxJinetes = ins.cantidadJinetes || (ins.jinete2 ? 2 : 1); // Soporte para data vieja
+                
+                for(let i = 1; i <= maxJinetes; i++) {
+                    if(ins[`jinete${i}`]) {
+                        const clubTxt = ins[`club${i}`] || ins.club || 'Sin Club'; // Compatibilidad vieja/nueva
+                        const fonoTxt = ins[`telefono${i}`] || ins.telefono || '-';
+                        const criaderoTxt = ins[`criadero${i}`] ? `(Criadero: ${ins[`criadero${i}`]})` : '';
+                        
+                        jinetesHTML += `
+                            <div class="jinete-fila">
+                                <strong>${i}. ${ins[`jinete${i}`]}</strong> [RUT: ${ins[`rut${i}`]}]<br>
+                                <span class="meta-info">🐴 Caballo: ${ins[`caballo${i}`]} ${criaderoTxt}</span>
+                                <span class="meta-info">📞 ${fonoTxt} | 🛡️ Club: ${clubTxt}</span>
+                            </div>`;
+                    }
+                }
+
                 tbody.innerHTML += `
                     <tr>
-                        <td>${ins.rodeo}</td>
-                        <td>${ins.serie}</td>
-                        <td>${ins.nombre}</td>
-                        <td>${ins.companero}</td>
-                        <td>${ins.caballo}</td>
-                        <td>${ins.club}</td>
-                        <td>${ins.telefono}</td>
+                        <td><strong>${ins.serie}</strong><br><span class="meta-info">${ins.rodeo}</span></td>
+                        <td>${jinetesHTML}</td>
                         <td><button class="btn-cerrar" onclick="borrarSeguro('${ins.id}')">Borrar</button></td>
                     </tr>`;
             });
@@ -252,53 +249,33 @@
             document.getElementById('nuevoRodeo').value = '';
         };
 
-        // NUEVO: Lógica de creación de serie con cálculo de fecha de cierre
         window.crearSerie = async function() {
             const rodeo = document.getElementById('rodeoParaSerie').value;
             const serie = document.getElementById('nuevaSerie').value;
             const minutos = parseInt(document.getElementById('tiempoSerie').value);
+            if(!rodeo || !serie || !minutos) return alert("Selecciona un Rodeo, Serie y Tiempo válido.");
             
-            if(!rodeo || !serie) return alert("Selecciona un Rodeo y escribe una Serie.");
-            if(!minutos || minutos <= 0) return alert("Debes ingresar un tiempo válido en minutos.");
-            
-            const ahora = Date.now();
-            const fechaDeCierre = ahora + (minutos * 60 * 1000);
-
             await addDoc(collection(db, "series"), { 
-                nombre: serie, 
-                rodeoNombre: rodeo, 
-                estado: "abierto", 
-                fechaApertura: ahora,
-                fechaCierre: fechaDeCierre // Guardamos el momento exacto en que debe morir
+                nombre: serie, rodeoNombre: rodeo, estado: "abierto", 
+                fechaApertura: Date.now(), fechaCierre: Date.now() + (minutos * 60 * 1000)
             });
-            
-            document.getElementById('nuevaSerie').value = '';
-            document.getElementById('tiempoSerie').value = '';
+            document.getElementById('nuevaSerie').value = ''; document.getElementById('tiempoSerie').value = '';
         };
 
         window.cerrarItem = async function(coleccion, id) {
-            if(confirm("¿Seguro que deseas cerrar esto? Ya no aparecerá a los jinetes.")) {
-                await updateDoc(doc(db, coleccion, id), { estado: "cerrado" });
-            }
+            if(confirm("¿Cerrar esto?")) await updateDoc(doc(db, coleccion, id), { estado: "cerrado" });
         };
 
-        // Función silenciosa que cierra la serie cuando el tiempo se agota
         window.cerrarItemAutomatico = async function(id) {
-            if(window.seriesCerrando[id]) return; // Previene que se envíe la orden múltiples veces
-            window.seriesCerrando[id] = true;
-            try {
-                await updateDoc(doc(db, "series", id), { estado: "cerrado" });
-            } catch(e) {
-                console.error("Error al cerrar automáticamente:", e);
-            }
+            if(window.seriesCerrando[id]) return; window.seriesCerrando[id] = true;
+            try { await updateDoc(doc(db, "series", id), { estado: "cerrado" }); } catch(e) {}
         }
 
         window.borrarSeguro = async function(id) {
-            if(confirm("¿Seguro que deseas borrar a este jinete? (Quedará respaldado internamente en caso de error)")) {
-                await updateDoc(doc(db, "inscripciones", id), { estado: "eliminado" });
-            }
+            if(confirm("¿Borrar a este equipo de la pantalla?")) await updateDoc(doc(db, "inscripciones", id), { estado: "eliminado" });
         };
 
+        // Generador de EXCEL Inteligente y Dinámico
         window.exportarExcel = function() {
             const filtroRodeo = document.getElementById('filtroRodeoTabla').value;
             const filtroSerie = document.getElementById('filtroSerieTabla').value;
@@ -310,55 +287,51 @@
                 return true;
             });
 
-            if(datosAExportar.length === 0) return alert("No hay datos para exportar con este filtro.");
+            if(datosAExportar.length === 0) return alert("No hay datos para exportar.");
             
-            const datosLimpios = datosAExportar.map(ins => ({
-                Rodeo: ins.rodeo, Serie: ins.serie, Jinete: ins.nombre, 
-                Compañero: ins.companero, Caballo: ins.caballo, Club: ins.club, Teléfono: ins.telefono
-            }));
+            // Reconstruimos los datos para crear las columnas necesarias
+            const datosLimpios = datosAExportar.map(ins => {
+                let filaExcel = {
+                    Rodeo: ins.rodeo,
+                    Serie: ins.serie
+                };
+
+                let maxJinetes = ins.cantidadJinetes || (ins.jinete2 ? 2 : 1);
+                
+                for(let i = 1; i <= 10; i++) {
+                    if (i <= maxJinetes && ins[`jinete${i}`]) {
+                        filaExcel[`Jinete ${i} - Nombre`] = ins[`jinete${i}`];
+                        filaExcel[`Jinete ${i} - RUT`] = ins[`rut${i}`];
+                        filaExcel[`Jinete ${i} - Caballo`] = ins[`caballo${i}`];
+                        filaExcel[`Jinete ${i} - Criadero`] = ins[`criadero${i}`] || '';
+                        filaExcel[`Jinete ${i} - Club`] = ins[`club${i}`] || ins.club || '';
+                        filaExcel[`Jinete ${i} - Teléfono`] = ins[`telefono${i}`] || ins.telefono || '';
+                    }
+                }
+                return filaExcel;
+            });
 
             const ws = XLSX.utils.json_to_sheet(datosLimpios);
             const wb = XLSX.utils.book_new();
             XLSX.utils.book_append_sheet(wb, ws, "Inscripciones");
-            
-            let nombreArchivo = "Inscripciones";
-            if(filtroRodeo !== "TODOS") nombreArchivo += "_" + filtroRodeo;
-            nombreArchivo += ".xlsx";
-            
-            XLSX.writeFile(wb, nombreArchivo);
+            XLSX.writeFile(wb, `Inscripciones_${filtroRodeo !== "TODOS" ? filtroRodeo : "Totales"}.xlsx`);
         };
 
-        // Bucle que maneja los relojes en tiempo real (Progresivo y Regresivo)
         setInterval(() => {
-            // Reloj Progresivo (Para Rodeos)
             document.querySelectorAll('.timer').forEach(el => {
-                const inicio = parseInt(el.getAttribute('data-inicio'));
-                const dif = Date.now() - inicio;
-                let segundos = Math.floor(dif / 1000);
-                let horas = Math.floor(segundos / 3600);
-                segundos %= 3600;
-                let minutos = Math.floor(segundos / 60);
-                segundos %= 60;
-                el.innerText = `Abierto hace: ${horas}h ${minutos}m ${segundos}s`;
+                const dif = Date.now() - parseInt(el.getAttribute('data-inicio'));
+                let s = Math.floor(dif / 1000), h = Math.floor(s / 3600); s %= 3600; let m = Math.floor(s / 60); s %= 60;
+                el.innerText = `Abierto hace: ${h}h ${m}m ${s}s`;
             });
 
-            // Reloj Regresivo (Para Series)
             document.querySelectorAll('.timer-countdown').forEach(el => {
-                const cierre = parseInt(el.getAttribute('data-cierre'));
-                const id = el.getAttribute('data-id');
-                const dif = cierre - Date.now();
-
+                const cierre = parseInt(el.getAttribute('data-cierre')), dif = cierre - Date.now();
                 if (dif <= 0) {
-                    el.innerText = "Cerrando...";
-                    el.classList.remove('timer-countdown'); // Detiene el reloj
-                    cerrarItemAutomatico(id); // Dispara la acción en la base de datos
+                    el.innerText = "Cerrando..."; el.classList.remove('timer-countdown'); 
+                    cerrarItemAutomatico(el.getAttribute('data-id')); 
                 } else {
-                    let segundos = Math.floor(dif / 1000);
-                    let horas = Math.floor(segundos / 3600);
-                    segundos %= 3600;
-                    let minutos = Math.floor(segundos / 60);
-                    segundos %= 60;
-                    el.innerText = `⏳ Faltan: ${horas}h ${minutos}m ${segundos}s`;
+                    let s = Math.floor(dif / 1000), h = Math.floor(s / 3600); s %= 3600; let m = Math.floor(s / 60); s %= 60;
+                    el.innerText = `⏳ Faltan: ${h}h ${m}m ${s}s`;
                 }
             });
         }, 1000);
