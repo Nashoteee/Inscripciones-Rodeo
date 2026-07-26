@@ -33,11 +33,21 @@
             <div id="contenedorFormulario" style="display: none;">
                 <form id="registroForm">
                     <div class="form-group">
-                        <label>Seleccione el Rodeo:</label>
+                        <label>1. Seleccione el Rodeo:</label>
                         <select id="rodeo" required>
                             <option value="">Cargando rodeos...</option>
                         </select>
                     </div>
+                    
+                    <div class="form-group">
+                        <label>2. Seleccione la Serie:</label>
+                        <select id="serie" required disabled>
+                            <option value="">Primero seleccione un Rodeo...</option>
+                        </select>
+                    </div>
+
+                    <hr style="margin: 20px 0; border: 1px solid #eee;">
+
                     <div class="form-group">
                         <input type="text" id="nombre" placeholder="Nombre del jinete" required>
                     </div>
@@ -54,12 +64,6 @@
                         <input type="text" id="caballo" placeholder="Nombre del caballo" required>
                     </div>
                     <div class="form-group">
-                        <label>Seleccione la Serie:</label>
-                        <select id="serie" required>
-                            <option value="">Cargando series...</option>
-                        </select>
-                    </div>
-                    <div class="form-group">
                         <input type="text" id="companero" placeholder="Compañero de collera" required>
                     </div>
                     <button type="submit" id="btnRegistrar">Registrar Inscripción</button>
@@ -67,7 +71,6 @@
             </div>
         </div>
         
-        <!-- Enlace que abre el panel de control en una pestaña nueva -->
         <a href="admin.html" target="_blank" class="admin-link">🔑 Acceso Administrador</a>
     </div>
 
@@ -92,7 +95,9 @@
         const formDiv = document.getElementById('contenedorFormulario');
         const msjCerrado = document.getElementById('mensajeCerrado');
 
-        // Escuchar Rodeos Abiertos
+        let unsubscribeSeries = null; // Para limpiar la búsqueda de series cuando cambien de rodeo
+
+        // 1. Escuchar Rodeos Abiertos
         const qRodeos = query(collection(db, "rodeos"), where("estado", "==", "abierto"));
         onSnapshot(qRodeos, (snapshot) => {
             selectRodeo.innerHTML = '<option value="">Seleccione el Rodeo...</option>';
@@ -108,18 +113,48 @@
             }
         });
 
-        // Escuchar Series Abiertas
-        const qSeries = query(collection(db, "series"), where("estado", "==", "abierto"));
-        onSnapshot(qSeries, (snapshot) => {
-            selectSerie.innerHTML = '<option value="">Seleccione la Serie...</option>';
-            snapshot.forEach(doc => {
-                selectSerie.innerHTML += `<option value="${doc.data().nombre}">${doc.data().nombre}</option>`;
+        // 2. Detectar cuando el jinete elige un Rodeo para cargar sus Series
+        selectRodeo.addEventListener('change', (e) => {
+            const rodeoSeleccionado = e.target.value;
+            
+            // Si había una búsqueda anterior, la detenemos
+            if(unsubscribeSeries) unsubscribeSeries();
+
+            if(!rodeoSeleccionado) {
+                selectSerie.innerHTML = '<option value="">Primero seleccione un Rodeo...</option>';
+                selectSerie.disabled = true;
+                return;
+            }
+
+            selectSerie.innerHTML = '<option value="">Buscando series abiertas...</option>';
+            selectSerie.disabled = false;
+
+            // Buscar solo las series que pertenecen al rodeo seleccionado
+            const qSeries = query(collection(db, "series"), 
+                where("estado", "==", "abierto"),
+                where("rodeoNombre", "==", rodeoSeleccionado)
+            );
+
+            unsubscribeSeries = onSnapshot(qSeries, (snapshot) => {
+                if(snapshot.empty) {
+                    selectSerie.innerHTML = '<option value="">No hay series abiertas para este rodeo aún</option>';
+                    selectSerie.disabled = true;
+                } else {
+                    selectSerie.innerHTML = '<option value="">Seleccione la Serie...</option>';
+                    selectSerie.disabled = false;
+                    snapshot.forEach(doc => {
+                        selectSerie.innerHTML += `<option value="${doc.data().nombre}">${doc.data().nombre}</option>`;
+                    });
+                }
             });
         });
 
-        // Guardar Inscripción
+        // 3. Guardar Inscripción
         document.getElementById('registroForm').addEventListener('submit', async function(e) {
             e.preventDefault();
+            
+            if(!selectSerie.value) return alert("Debes seleccionar una serie válida.");
+
             const btn = document.getElementById('btnRegistrar');
             btn.innerText = "Guardando..."; btn.disabled = true;
 
@@ -137,6 +172,8 @@
                 });
                 alert("¡Inscripción guardada exitosamente!");
                 this.reset();
+                selectSerie.innerHTML = '<option value="">Primero seleccione un Rodeo...</option>';
+                selectSerie.disabled = true;
             } catch (error) {
                 alert("Error al guardar: " + error.message);
             }
