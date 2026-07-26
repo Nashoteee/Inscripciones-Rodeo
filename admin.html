@@ -1,0 +1,227 @@
+<!DOCTYPE html>
+<html lang="es">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Panel de Administración - Rodeo</title>
+    <script src="https://cdnjs.cloudflare.com/ajax/libs/xlsx/0.18.5/xlsx.full.min.js"></script>
+    <style>
+        body { font-family: 'Segoe UI', Tahoma, Geneva, Verdana, sans-serif; background-color: #2c3e50; padding: 20px; color: #333; margin: 0; }
+        .login-screen { background: white; max-width: 400px; margin: 100px auto; padding: 30px; border-radius: 8px; text-align: center; box-shadow: 0 4px 15px rgba(0,0,0,0.2); }
+        .login-screen input { width: 100%; padding: 10px; margin: 15px 0; border: 1px solid #ccc; border-radius: 4px; box-sizing: border-box; }
+        .login-screen button { background: #27ae60; color: white; border: none; padding: 10px; width: 100%; border-radius: 4px; cursor: pointer; font-size: 16px; font-weight: bold;}
+        
+        .admin-dashboard { display: none; max-width: 1200px; margin: auto; }
+        h1, h2 { color: white; }
+        .card { background: white; padding: 20px; border-radius: 8px; margin-bottom: 20px; box-shadow: 0 2px 5px rgba(0,0,0,0.1); }
+        .card h3 { margin-top: 0; color: #2c3e50; border-bottom: 2px solid #ecf0f1; padding-bottom: 10px; }
+        
+        .flex-grid { display: flex; gap: 20px; flex-wrap: wrap; }
+        .col { flex: 1; min-width: 300px; }
+        
+        input, select, button { padding: 10px; margin-bottom: 10px; border-radius: 4px; border: 1px solid #ccc; width: 100%; box-sizing: border-box; }
+        .btn-crear { background-color: #2980b9; color: white; font-weight: bold; border: none; cursor: pointer; }
+        .btn-crear:hover { background-color: #1f6391; }
+        .btn-cerrar { background-color: #e74c3c; color: white; border: none; padding: 5px 10px; cursor: pointer; border-radius: 4px; }
+        .btn-excel { background-color: #27ae60; color: white; border: none; font-weight: bold; cursor: pointer; }
+        
+        .item-lista { display: flex; justify-content: space-between; align-items: center; background: #f8f9fa; padding: 10px; border: 1px solid #ddd; border-radius: 4px; margin-bottom: 10px; }
+        .timer { font-family: monospace; font-weight: bold; color: #d35400; font-size: 1.1em; background: #ffeaa7; padding: 3px 8px; border-radius: 4px;}
+        
+        table { width: 100%; border-collapse: collapse; margin-top: 15px; font-size: 14px; }
+        th, td { border: 1px solid #ddd; padding: 8px; text-align: left; }
+        th { background-color: #f4f4f4; color: #333;}
+    </style>
+</head>
+<body>
+
+    <!-- Pantalla de Login -->
+    <div class="login-screen" id="loginScreen">
+        <h2>🔒 Panel de Control</h2>
+        <p>Ingresa la contraseña de administrador</p>
+        <input type="password" id="passInput" placeholder="Contraseña">
+        <button onclick="verificarPassword()">Ingresar</button>
+    </div>
+
+    <!-- Panel de Control Principal -->
+    <div class="admin-dashboard" id="adminDashboard">
+        <h1>⚙️ Panel de Administración - Rodeo</h1>
+
+        <div class="flex-grid">
+            <!-- Columna Rodeos -->
+            <div class="col card">
+                <h3>🤠 Gestión de Rodeos</h3>
+                <input type="text" id="nuevoRodeo" placeholder="Nombre del nuevo rodeo (Ej: Rodeo Oficial 2026)">
+                <button class="btn-crear" onclick="crearItem('rodeos', 'nuevoRodeo')">+ Abrir Nuevo Rodeo</button>
+                <h4>Rodeos Abiertos (Activos):</h4>
+                <div id="listaRodeos"></div>
+            </div>
+
+            <!-- Columna Series -->
+            <div class="col card">
+                <h3>🐎 Gestión de Series</h3>
+                <input type="text" id="nuevaSerie" placeholder="Nombre de la serie (Ej: Serie Potros)">
+                <button class="btn-crear" onclick="crearItem('series', 'nuevaSerie')">+ Abrir Nueva Serie</button>
+                <h4>Series Abiertas (Activas):</h4>
+                <div id="listaSeries"></div>
+            </div>
+        </div>
+
+        <!-- Tabla de Inscripciones -->
+        <div class="card">
+            <h3>📋 Base de Datos de Inscripciones</h3>
+            <button class="btn-excel" onclick="exportarExcel()">📥 Descargar Todo a Excel</button>
+            <div style="overflow-x: auto;">
+                <table id="tablaInscripciones">
+                    <thead>
+                        <tr>
+                            <th>Rodeo</th>
+                            <th>Serie</th>
+                            <th>Jinete</th>
+                            <th>Compañero</th>
+                            <th>Caballo</th>
+                            <th>Club</th>
+                            <th>Teléfono</th>
+                            <th>Acción</th>
+                        </tr>
+                    </thead>
+                    <tbody>
+                        <!-- Filas dinámicas -->
+                    </tbody>
+                </table>
+            </div>
+        </div>
+    </div>
+
+    <script type="module">
+        import { initializeApp } from "https://www.gstatic.com/firebasejs/10.12.2/firebase-app.js";
+        import { getFirestore, collection, addDoc, onSnapshot, query, where, updateDoc, doc, deleteDoc } from "https://www.gstatic.com/firebasejs/10.12.2/firebase-firestore.js";
+
+        const firebaseConfig = {
+          apiKey: "AIzaSyCqtSOu4YemJGUb9dRG_7IDZZBL4E3yNsM",
+          authDomain: "inscripciones-rodeos-909bb.firebaseapp.com",
+          projectId: "inscripciones-rodeos-909bb",
+          storageBucket: "inscripciones-rodeos-909bb.firebasestorage.app",
+          messagingSenderId: "541411909779",
+          appId: "1:541411909779:web:4cae02b122a4ac8928ad66"
+        };
+
+        const app = initializeApp(firebaseConfig);
+        const db = getFirestore(app);
+        
+        let inscripcionesGlobales = [];
+
+        // Sistema básico de Login
+        window.verificarPassword = function() {
+            if(document.getElementById('passInput').value === "rodeo2026") {
+                document.getElementById('loginScreen').style.display = "none";
+                document.getElementById('adminDashboard').style.display = "block";
+                iniciarBaseDeDatos(); // Solo carga los datos si la contraseña es correcta
+            } else {
+                alert("Contraseña incorrecta");
+            }
+        };
+
+        function iniciarBaseDeDatos() {
+            // Escuchar Rodeos Abiertos
+            onSnapshot(query(collection(db, "rodeos"), where("estado", "==", "abierto")), (snapshot) => {
+                const contenedor = document.getElementById('listaRodeos');
+                contenedor.innerHTML = '';
+                snapshot.forEach(d => {
+                    const data = d.data();
+                    contenedor.innerHTML += `
+                        <div class="item-lista">
+                            <div><strong>${data.nombre}</strong><br><span class="timer" data-inicio="${data.fechaApertura}">00:00:00</span></div>
+                            <button class="btn-cerrar" onclick="cerrarItem('rodeos', '${d.id}')">Cerrar</button>
+                        </div>`;
+                });
+            });
+
+            // Escuchar Series Abiertas
+            onSnapshot(query(collection(db, "series"), where("estado", "==", "abierto")), (snapshot) => {
+                const contenedor = document.getElementById('listaSeries');
+                contenedor.innerHTML = '';
+                snapshot.forEach(d => {
+                    const data = d.data();
+                    contenedor.innerHTML += `
+                        <div class="item-lista">
+                            <div><strong>${data.nombre}</strong><br><span class="timer" data-inicio="${data.fechaApertura}">00:00:00</span></div>
+                            <button class="btn-cerrar" onclick="cerrarItem('series', '${d.id}')">Cerrar</button>
+                        </div>`;
+                });
+            });
+
+            // Escuchar Inscripciones
+            onSnapshot(collection(db, "inscripciones"), (snapshot) => {
+                const tbody = document.querySelector('#tablaInscripciones tbody');
+                tbody.innerHTML = '';
+                inscripcionesGlobales = [];
+                snapshot.forEach(d => {
+                    const ins = d.data();
+                    inscripcionesGlobales.push(ins);
+                    tbody.innerHTML += `
+                        <tr>
+                            <td>${ins.rodeo}</td>
+                            <td>${ins.serie}</td>
+                            <td>${ins.nombre}</td>
+                            <td>${ins.companero}</td>
+                            <td>${ins.caballo}</td>
+                            <td>${ins.club}</td>
+                            <td>${ins.telefono}</td>
+                            <td><button class="btn-cerrar" onclick="borrarInscripcion('${d.id}')">Borrar</button></td>
+                        </tr>`;
+                });
+            });
+        }
+
+        // Funciones Globales para Firebase
+        window.crearItem = async function(coleccion, inputId) {
+            const nombre = document.getElementById(inputId).value;
+            if(!nombre) return alert("Escribe un nombre");
+            
+            await addDoc(collection(db, coleccion), {
+                nombre: nombre,
+                estado: "abierto",
+                fechaApertura: Date.now()
+            });
+            document.getElementById(inputId).value = '';
+        };
+
+        window.cerrarItem = async function(coleccion, id) {
+            if(confirm("¿Seguro que deseas cerrar esto? Ya no aparecerá en el formulario público.")) {
+                await updateDoc(doc(db, coleccion, id), { estado: "cerrado" });
+            }
+        };
+
+        window.borrarInscripcion = async function(id) {
+            if(confirm("¿Borrar esta inscripción permanentemente?")) {
+                await deleteDoc(doc(db, "inscripciones", id));
+            }
+        };
+
+        window.exportarExcel = function() {
+            if(inscripcionesGlobales.length === 0) return alert("No hay datos");
+            const ws = XLSX.utils.json_to_sheet(inscripcionesGlobales);
+            const wb = XLSX.utils.book_new();
+            XLSX.utils.book_append_sheet(wb, ws, "Inscripciones");
+            XLSX.writeFile(wb, "Base_Datos_Rodeo.xlsx");
+        };
+
+        // Lógica del Temporizador en tiempo real
+        setInterval(() => {
+            document.querySelectorAll('.timer').forEach(el => {
+                const inicio = parseInt(el.getAttribute('data-inicio'));
+                const dif = Date.now() - inicio;
+                
+                let segundos = Math.floor(dif / 1000);
+                let horas = Math.floor(segundos / 3600);
+                segundos %= 3600;
+                let minutos = Math.floor(segundos / 60);
+                segundos %= 60;
+                
+                el.innerText = `${horas}h ${minutos}m ${segundos}s`;
+            });
+        }, 1000);
+    </script>
+</body>
+</html>
