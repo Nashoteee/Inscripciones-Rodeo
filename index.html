@@ -7,15 +7,25 @@
     <style>
         body { font-family: 'Segoe UI', Tahoma, Geneva, Verdana, sans-serif; background-color: #f9f9f9; padding: 20px; color: #333; }
         .container { max-width: 900px; margin: auto; background: white; padding: 20px; border-radius: 8px; box-shadow: 0 4px 8px rgba(0,0,0,0.1); }
-        h1, h2 { color: #2c3e50; text-align: center;}
+        h1, h2, h3 { color: #2c3e50; text-align: center;}
+        h3 { border-bottom: 2px solid #ecf0f1; padding-bottom: 10px; margin-top: 30px; }
         .section { margin-bottom: 30px; padding: 20px; border: 1px solid #e0e0e0; border-radius: 6px; background-color: #ffffff; }
         .form-group { margin-bottom: 15px; }
-        label { font-weight: bold; display: block; margin-bottom: 5px; }
+        label { font-weight: bold; display: block; margin-bottom: 5px; color: #34495e; }
         input, select, button { width: 100%; padding: 10px; box-sizing: border-box; border-radius: 4px; border: 1px solid #ccc; font-size: 16px; }
         button { cursor: pointer; background-color: #27ae60; color: white; border: none; font-weight: bold; margin-top: 10px; transition: 0.3s; }
         button:hover { background-color: #219150; }
+        .btn-toggle { background-color: #f39c12; margin-bottom: 20px; }
+        .btn-toggle:hover { background-color: #d68910; }
+        
         .mensaje-cerrado { display: none; background: #f8d7da; color: #721c24; padding: 20px; border-radius: 6px; text-align: center; border: 1px solid #f5c6cb; margin-bottom: 20px; }
         .admin-link { display: block; text-align: center; margin-top: 30px; color: #7f8c8d; text-decoration: none; font-size: 14px; }
+        
+        /* Estilo del cronómetro para el jinete */
+        #tiempoRestante { display: none; color: #d35400; font-weight: bold; margin-top: 10px; font-family: monospace; font-size: 1.2em; background: #ffeaa7; padding: 8px; border-radius: 4px; text-align: center; border: 1px solid #f1c40f; }
+        
+        /* Contenedor del jinete 2 */
+        #seccionJinete2 { display: none; background: #fdf2e9; padding: 15px; border-radius: 6px; border: 1px solid #fae5d3; margin-bottom: 15px; }
     </style>
 </head>
 <body>
@@ -44,28 +54,51 @@
                         <select id="serie" required disabled>
                             <option value="">Primero seleccione un Rodeo...</option>
                         </select>
+                        <!-- Cronómetro visible para el jinete -->
+                        <div id="tiempoRestante"></div>
                     </div>
 
-                    <hr style="margin: 20px 0; border: 1px solid #eee;">
+                    <div class="form-group">
+                        <label>3. Asociación o Club:</label>
+                        <input type="text" id="club" placeholder="Nombre del club" required>
+                    </div>
+                    <div class="form-group">
+                        <label>Teléfono de contacto:</label>
+                        <input type="tel" id="telefono" placeholder="Número de teléfono" required>
+                    </div>
 
+                    <h3>Datos del Primer Jinete</h3>
                     <div class="form-group">
-                        <input type="text" id="nombre" placeholder="Nombre del jinete" required>
+                        <input type="text" id="nombre1" placeholder="Nombre del primer jinete" required>
                     </div>
                     <div class="form-group">
-                        <input type="text" id="rut" placeholder="RUT" required>
+                        <input type="text" id="rut1" placeholder="RUT del primer jinete" required>
                     </div>
                     <div class="form-group">
-                        <input type="tel" id="telefono" placeholder="Teléfono" required>
+                        <input type="text" id="caballo1" placeholder="Nombre del 1er caballo" required>
                     </div>
                     <div class="form-group">
-                        <input type="text" id="club" placeholder="Asociación o club" required>
+                        <input type="text" id="criadero1" placeholder="Criadero del 1er caballo (Opcional)">
                     </div>
-                    <div class="form-group">
-                        <input type="text" id="caballo" placeholder="Nombre del caballo" required>
+
+                    <button type="button" id="btnAgregarJinete2" class="btn-toggle">+ Agregar Segundo Jinete (Compañero)</button>
+
+                    <div id="seccionJinete2">
+                        <h3>Datos del Segundo Jinete</h3>
+                        <div class="form-group">
+                            <input type="text" id="nombre2" placeholder="Nombre del segundo jinete">
+                        </div>
+                        <div class="form-group">
+                            <input type="text" id="rut2" placeholder="RUT del segundo jinete">
+                        </div>
+                        <div class="form-group">
+                            <input type="text" id="caballo2" placeholder="Nombre del 2do caballo">
+                        </div>
+                        <div class="form-group">
+                            <input type="text" id="criadero2" placeholder="Criadero del 2do caballo (Opcional)">
+                        </div>
                     </div>
-                    <div class="form-group">
-                        <input type="text" id="companero" placeholder="Compañero de collera" required>
-                    </div>
+
                     <button type="submit" id="btnRegistrar">Registrar Inscripción</button>
                 </form>
             </div>
@@ -94,8 +127,40 @@
         const selectSerie = document.getElementById('serie');
         const formDiv = document.getElementById('contenedorFormulario');
         const msjCerrado = document.getElementById('mensajeCerrado');
+        const timerDiv = document.getElementById('tiempoRestante');
+        const btnRegistrar = document.getElementById('btnRegistrar');
 
-        let unsubscribeSeries = null; // Para limpiar la búsqueda de series cuando cambien de rodeo
+        let unsubscribeSeries = null; 
+        let cronometroInterval = null;
+        let jinete2Activo = false;
+
+        // Lógica para mostrar/ocultar al Segundo Jinete
+        document.getElementById('btnAgregarJinete2').addEventListener('click', function() {
+            jinete2Activo = !jinete2Activo;
+            const seccion = document.getElementById('seccionJinete2');
+            
+            if(jinete2Activo) {
+                seccion.style.display = "block";
+                this.innerText = "- Quitar Segundo Jinete";
+                this.style.backgroundColor = "#e74c3c"; // Rojo
+                // Hacer campos obligatorios
+                document.getElementById('nombre2').required = true;
+                document.getElementById('rut2').required = true;
+                document.getElementById('caballo2').required = true;
+            } else {
+                seccion.style.display = "none";
+                this.innerText = "+ Agregar Segundo Jinete (Compañero)";
+                this.style.backgroundColor = "#f39c12"; // Naranja
+                // Quitar obligatoriedad y limpiar
+                document.getElementById('nombre2').required = false;
+                document.getElementById('rut2').required = false;
+                document.getElementById('caballo2').required = false;
+                document.getElementById('nombre2').value = "";
+                document.getElementById('rut2').value = "";
+                document.getElementById('caballo2').value = "";
+                document.getElementById('criadero2').value = "";
+            }
+        });
 
         // 1. Escuchar Rodeos Abiertos
         const qRodeos = query(collection(db, "rodeos"), where("estado", "==", "abierto"));
@@ -116,8 +181,10 @@
         // 2. Detectar cuando el jinete elige un Rodeo para cargar sus Series
         selectRodeo.addEventListener('change', (e) => {
             const rodeoSeleccionado = e.target.value;
+            clearInterval(cronometroInterval);
+            timerDiv.style.display = "none";
+            btnRegistrar.disabled = false;
             
-            // Si había una búsqueda anterior, la detenemos
             if(unsubscribeSeries) unsubscribeSeries();
 
             if(!rodeoSeleccionado) {
@@ -129,7 +196,6 @@
             selectSerie.innerHTML = '<option value="">Buscando series abiertas...</option>';
             selectSerie.disabled = false;
 
-            // Buscar solo las series que pertenecen al rodeo seleccionado
             const qSeries = query(collection(db, "series"), 
                 where("estado", "==", "abierto"),
                 where("rodeoNombre", "==", rodeoSeleccionado)
@@ -143,41 +209,89 @@
                     selectSerie.innerHTML = '<option value="">Seleccione la Serie...</option>';
                     selectSerie.disabled = false;
                     snapshot.forEach(doc => {
-                        selectSerie.innerHTML += `<option value="${doc.data().nombre}">${doc.data().nombre}</option>`;
+                        // Guardamos la fecha de cierre dentro de la opción (oculta)
+                        selectSerie.innerHTML += `<option value="${doc.data().nombre}" data-cierre="${doc.data().fechaCierre}">${doc.data().nombre}</option>`;
                     });
                 }
             });
         });
 
-        // 3. Guardar Inscripción
+        // 3. Detectar selección de Serie para encender el Cronómetro
+        selectSerie.addEventListener('change', (e) => {
+            clearInterval(cronometroInterval);
+            const opcionSeleccionada = selectSerie.options[selectSerie.selectedIndex];
+            const cierre = opcionSeleccionada.getAttribute('data-cierre');
+
+            if(cierre && cierre !== "undefined") {
+                timerDiv.style.display = "block";
+                
+                cronometroInterval = setInterval(() => {
+                    const dif = parseInt(cierre) - Date.now();
+                    
+                    if(dif <= 0) {
+                        timerDiv.innerText = "❌ Esta serie acaba de cerrar. Actualiza la página.";
+                        timerDiv.style.color = "#c0392b";
+                        timerDiv.style.borderColor = "#c0392b";
+                        timerDiv.style.backgroundColor = "#fadbd8";
+                        btnRegistrar.disabled = true;
+                        btnRegistrar.style.backgroundColor = "#95a5a6";
+                        clearInterval(cronometroInterval);
+                    } else {
+                        btnRegistrar.disabled = false;
+                        btnRegistrar.style.backgroundColor = "#27ae60";
+                        timerDiv.style.color = "#d35400";
+                        timerDiv.style.borderColor = "#f1c40f";
+                        timerDiv.style.backgroundColor = "#ffeaa7";
+                        
+                        let segundos = Math.floor(dif / 1000);
+                        let horas = Math.floor(segundos / 3600);
+                        segundos %= 3600;
+                        let minutos = Math.floor(segundos / 60);
+                        segundos %= 60;
+                        timerDiv.innerText = `⏳ Tiempo restante para inscribirse: ${horas}h ${minutos}m ${segundos}s`;
+                    }
+                }, 1000);
+            } else {
+                timerDiv.style.display = "none";
+            }
+        });
+
+        // 4. Guardar Inscripción con la nueva estructura
         document.getElementById('registroForm').addEventListener('submit', async function(e) {
             e.preventDefault();
             
             if(!selectSerie.value) return alert("Debes seleccionar una serie válida.");
 
-            const btn = document.getElementById('btnRegistrar');
-            btn.innerText = "Guardando..."; btn.disabled = true;
+            btnRegistrar.innerText = "Guardando..."; btnRegistrar.disabled = true;
 
             try {
                 await addDoc(collection(db, "inscripciones"), {
                     rodeo: document.getElementById('rodeo').value,
                     serie: document.getElementById('serie').value,
-                    nombre: document.getElementById('nombre').value,
-                    rut: document.getElementById('rut').value,
-                    telefono: document.getElementById('telefono').value,
                     club: document.getElementById('club').value,
-                    caballo: document.getElementById('caballo').value,
-                    companero: document.getElementById('companero').value,
-                    fecha: Date.now()
+                    telefono: document.getElementById('telefono').value,
+                    
+                    // Datos Jinete 1
+                    jinete1: document.getElementById('nombre1').value,
+                    rut1: document.getElementById('rut1').value,
+                    caballo1: document.getElementById('caballo1').value,
+                    criadero1: document.getElementById('criadero1').value || "",
+                    
+                    // Datos Jinete 2 (Si aplica)
+                    jinete2: document.getElementById('nombre2').value || "",
+                    rut2: document.getElementById('rut2').value || "",
+                    caballo2: document.getElementById('caballo2').value || "",
+                    criadero2: document.getElementById('criadero2').value || "",
+                    
+                    fecha: Date.now(),
+                    estado: "activo" // Para el borrado seguro
                 });
                 alert("¡Inscripción guardada exitosamente!");
-                this.reset();
-                selectSerie.innerHTML = '<option value="">Primero seleccione un Rodeo...</option>';
-                selectSerie.disabled = true;
+                location.reload(); // Recarga la página para limpiar todo de raíz
             } catch (error) {
                 alert("Error al guardar: " + error.message);
+                btnRegistrar.innerText = "Registrar Inscripción"; btnRegistrar.disabled = false;
             }
-            btn.innerText = "Registrar Inscripción"; btn.disabled = false;
         });
     </script>
 </body>
