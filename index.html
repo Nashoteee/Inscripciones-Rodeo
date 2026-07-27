@@ -184,7 +184,6 @@
             cajaResultado.innerText = "Buscando inscripción...";
 
             try {
-                // Buscamos coincidencias donde el rut1 coincida
                 const q = query(collection(db, "inscripciones"), where("rut1", "==", rutBuscado));
                 const snapshot = await getDocs(q);
 
@@ -198,6 +197,8 @@
                         if(datos.estado === "eliminado") return;
 
                         let estadoTexto = datos.estadoPago || "pendiente";
+                        let mensajeInfo = ""; // <-- ¡Aquí estaba el error, faltaba declarar la variable!
+
                         if(estadoTexto === "pendiente") {
                             cajaResultado.className = "resultado-estado estado-pendiente";
                             mensajeInfo = `⏳ Tu inscripción para el rodeo "${datos.rodeo}" (${datos.serie}) está PENDIENTE DE REVISIÓN de pago por la administración.`;
