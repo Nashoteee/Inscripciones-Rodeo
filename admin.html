@@ -309,7 +309,7 @@
             if(confirm("¿Borrar a este equipo de la pantalla?")) await updateDoc(doc(db, "inscripciones", id), { estado: "eliminado" });
         };
 
-        // EXCEL OPTIMIZADO: Estructura limpia de filas por jinete
+        // EXCEL OPTIMIZADO Y LIMPIO: Sin asociación, sin estado de pago y sin links molestos
         window.exportarExcel = function() {
             const filtroRodeo = document.getElementById('filtroRodeoTabla').value;
             const filtroSerie = document.getElementById('filtroSerieTabla').value;
@@ -331,18 +331,15 @@
                 for(let i = 1; i <= maxJinetes; i++) {
                     if(ins[`jinete${i}`]) {
                         filasExcelLimpias.push({
-                            "Asociación": ins.asociacion || "Asociación de Rodeo Santiago Cumbre",
                             "Rodeo": ins.rodeo,
                             "Serie": ins.serie,
-                            "Estado Pago": (ins.estadoPago || "pendiente").toUpperCase(),
-                            "N° Jinete": `${i}° Jinete`,
-                            "Nombre Jinete": ins[`jinete${i}`] || '-',
-                            "RUT Jinete": ins[`rut${i}`] || '-',
-                            "Caballo": ins[`caballo${i}`] || '-',
+                            "Posición": `${i}° Jinete`,
+                            "Nombre del Jinete": ins[`jinete${i}`] || '-',
+                            "RUT": ins[`rut${i}`] || '-',
+                            "Nombre del Caballo": ins[`caballo${i}`] || '-',
                             "Criadero": ins[`criadero${i}`] || '-',
                             "Club / Asociación": ins[`club${i}`] || ins.club || '-',
-                            "Teléfono": ins[`telefono${i}`] || ins.telefono || '-',
-                            "Comprobante de Pago": ins.comprobanteUrl || 'No adjunto'
+                            "Teléfono de Contacto": ins[`telefono${i}`] || ins.telefono || '-'
                         });
                     }
                 }
@@ -350,24 +347,21 @@
 
             const ws = XLSX.utils.json_to_sheet(filasExcelLimpias);
 
-            // Ajustar anchos de columnas para una lectura cómoda y profesional
+            // Anchos de columna limpios y profesionales
             ws['!cols'] = [
-                {wch: 32}, // Asociación
-                {wch: 22}, // Rodeo
+                {wch: 24}, // Rodeo
                 {wch: 18}, // Serie
-                {wch: 15}, // Estado Pago
-                {wch: 12}, // N° Jinete
+                {wch: 12}, // Posición
                 {wch: 28}, // Nombre Jinete
                 {wch: 15}, // RUT
                 {wch: 22}, // Caballo
                 {wch: 20}, // Criadero
                 {wch: 25}, // Club
-                {wch: 15}, // Teléfono
-                {wch: 40}  // Link Comprobante
+                {wch: 18}  // Teléfono
             ];
 
             const wb = XLSX.utils.book_new();
-            XLSX.utils.book_append_sheet(wb, ws, "Inscripciones Ordenadas");
+            XLSX.utils.book_append_sheet(wb, ws, "Inscripciones");
             
             let nombreArchivo = "Inscripciones_Santiago_Cumbre";
             if(filtroRodeo !== "TODOS") nombreArchivo += "_" + filtroRodeo;
