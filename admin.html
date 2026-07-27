@@ -3,7 +3,7 @@
 <head>
     <meta charset="UTF-8">
     <meta name="viewport" content="width=device-width, initial-scale=1.0">
-    <title>Panel de Administración - Rodeo</title>
+    <title>Administración - Asociación de Rodeo Santiago Cumbre</title>
     <script src="https://cdnjs.cloudflare.com/ajax/libs/xlsx/0.18.5/xlsx.full.min.js"></script>
     <style>
         body { font-family: 'Segoe UI', Tahoma, Geneva, Verdana, sans-serif; background-color: #2c3e50; padding: 20px; color: #333; margin: 0; }
@@ -12,7 +12,9 @@
         .login-screen button { background: #27ae60; color: white; border: none; padding: 10px; width: 100%; border-radius: 4px; cursor: pointer; font-size: 16px; font-weight: bold;}
         
         .admin-dashboard { display: none; max-width: 1200px; margin: auto; }
-        h1, h2 { color: white; }
+        h1, h2 { color: white; text-align: center; margin-bottom: 5px; }
+        .subtitulo-admin { text-align: center; color: #bdc3c7; font-weight: bold; margin-bottom: 25px; text-transform: uppercase; letter-spacing: 1px; }
+        
         .card { background: white; padding: 20px; border-radius: 8px; margin-bottom: 20px; box-shadow: 0 2px 5px rgba(0,0,0,0.1); }
         .card h3 { margin-top: 0; color: #2c3e50; border-bottom: 2px solid #ecf0f1; padding-bottom: 10px; }
         
@@ -49,13 +51,14 @@
 
     <div class="login-screen" id="loginScreen">
         <h2>🔒 Panel de Control</h2>
-        <p>Ingresa la contraseña de administrador</p>
+        <p>Asociación de Rodeo Santiago Cumbre</p>
         <input type="password" id="passInput" placeholder="Contraseña">
         <button onclick="verificarPassword()">Ingresar</button>
     </div>
 
     <div class="admin-dashboard" id="adminDashboard">
-        <h1>⚙️ Panel de Administración - Rodeo</h1>
+        <h1>⚙️ Panel de Administración</h1>
+        <div class="subtitulo-admin">Asociación de Rodeo Santiago Cumbre</div>
 
         <div class="flex-grid">
             <div class="col card">
@@ -232,7 +235,6 @@
                     }
                 }
 
-                // NUEVO: Mostrar botón de pago si existe la URL
                 let botonPagoHTML = "";
                 if(ins.comprobanteUrl) {
                     botonPagoHTML = `<a href="${ins.comprobanteUrl}" target="_blank" class="btn-pago">👁️ Ver Pago</a>`;
@@ -306,9 +308,10 @@
 
             const datosLimpios = datosAExportar.map(ins => {
                 let filaExcel = {
+                    "Asociación": ins.asociacion || "Asociación de Rodeo Santiago Cumbre",
                     "Rodeo": ins.rodeo,
                     "Serie": ins.serie,
-                    "Link Comprobante de Pago": ins.comprobanteUrl || 'No adjunto' // Agregamos la URL al Excel
+                    "Link Comprobante de Pago": ins.comprobanteUrl || 'No adjunto'
                 };
                 
                 for(let i = 1; i <= maxJinetesExportacion; i++) {
@@ -325,6 +328,7 @@
             const ws = XLSX.utils.json_to_sheet(datosLimpios);
 
             let anchosColumnas = [
+                {wch: 35}, // Asociación
                 {wch: 22}, // Rodeo
                 {wch: 20}, // Serie
                 {wch: 40}  // Link Pago
@@ -343,7 +347,7 @@
             const wb = XLSX.utils.book_new();
             XLSX.utils.book_append_sheet(wb, ws, "Inscripciones");
             
-            let nombreArchivo = "Inscripciones";
+            let nombreArchivo = "Inscripciones_Santiago_Cumbre";
             if(filtroRodeo !== "TODOS") nombreArchivo += "_" + filtroRodeo;
             if(filtroSerie !== "TODOS") nombreArchivo += "_" + filtroSerie;
             nombreArchivo += ".xlsx";
