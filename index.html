@@ -19,7 +19,11 @@
         
         .jinete-bloque { background: #fdf2e9; padding: 20px; border-radius: 8px; border: 1px solid #fae5d3; margin-bottom: 20px; }
         .mensaje-cerrado { display: none; background: #f8d7da; color: #721c24; padding: 20px; border-radius: 6px; text-align: center; border: 1px solid #f5c6cb; margin-bottom: 20px; }
-        .admin-link { display: block; text-align: center; margin-top: 30px; color: #7f8c8d; text-decoration: none; font-size: 14px; }
+        
+        .footer-links { display: flex; justify-content: center; gap: 20px; margin-top: 30px; font-size: 14px; }
+        .admin-link { color: #7f8c8d; text-decoration: none; }
+        .dev-link { color: #95a5a6; text-decoration: none; font-size: 12px; align-self: center; }
+
         #tiempoRestante { display: none; color: #d35400; font-weight: bold; margin-top: 10px; font-family: monospace; font-size: 1.2em; background: #ffeaa7; padding: 8px; border-radius: 4px; text-align: center; border: 1px solid #f1c40f; }
         
         .alerta-pago { background-color: #e8f8f5; border: 1px solid #a3e4d7; padding: 15px; border-radius: 6px; margin-top: 20px; }
@@ -113,7 +117,10 @@
             </div>
         </div>
         
-        <a href="admin.html" target="_blank" class="admin-link">🔑 Acceso Administrador</a>
+        <div class="footer-links">
+            <a href="admin.html" target="_blank" class="admin-link">🔑 Acceso Administrador</a>
+            <a href="dev.html" target="_blank" class="dev-link">⚙️ Acceso Desarrollador</a>
+        </div>
     </div>
 
     <script type="module">
@@ -247,7 +254,6 @@
             });
         });
 
-        // Verificación de cronómetro activo o cerrado manualmente en tiempo real
         selectSerie.addEventListener('change', () => {
             clearInterval(cronometroInterval);
             const opcionSeleccionada = selectSerie.options[selectSerie.selectedIndex];
@@ -259,7 +265,6 @@
                 return;
             }
 
-            // Escuchar cambios individuales por si el admin la cierra manualmente
             onSnapshot(doc(db, "series", serieId), (docSnap) => {
                 if (docSnap.exists() && docSnap.data().estado === "cerrado") {
                     clearInterval(cronometroInterval);
