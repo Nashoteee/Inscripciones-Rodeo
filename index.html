@@ -176,7 +176,7 @@
 
             cajaResultado.style.display = "block";
             cajaResultado.className = "resultado-estado estado-pendiente";
-            cajaResultado.innerText = "Buscando inscripción...";
+            cajaResultado.innerText = "Buscando inscripciones...";
 
             try {
                 const q = query(collection(db, "inscripciones"), where("rut1", "==", rutBuscado));
@@ -186,27 +186,49 @@
                     cajaResultado.className = "resultado-estado estado-rechazada";
                     cajaResultado.innerText = "❌ No se encontró ninguna inscripción activa con el RUT ingresado.";
                 } else {
-                    let mensajeFinal = "";
+                    let listaInscripcionesHTML = "<div style='font-weight: bold; margin-bottom: 10px; border-bottom: 1px solid #ccc; padding-bottom: 5px;'>📋 Historial de Inscripciones Encontradas:</div>";
+                    
+                    let encontradasVigentes = 0;
+
                     snapshot.forEach(docSnap => {
                         const datos = docSnap.data();
                         if(datos.estado === "eliminado") return;
 
+                        encontradasVigentes++;
                         let estadoTexto = datos.estadoPago || "pendiente";
-                        let mensajeInfo = "";
+                        let estiloCaja = "";
+                        let textoEstado = "";
 
-                        if(estadoTexto === "pendiente") {
-                            cajaResultado.className = "resultado-estado estado-pendiente";
-                            mensajeInfo = `⏳ Tu inscripción para el rodeo "${datos.rodeo}" (${datos.serie}) está PENDIENTE DE REVISIÓN de pago.`;
-                        } else if(estadoTexto === "aprobado") {
-                            cajaResultado.className = "resultado-estado estado-aprobada";
-                            mensajeInfo = `✅ ¡FELICIDADES! Tu pago para el rodeo "${datos.rodeo}" (${datos.serie}) fue APROBADO. ¡Inscripción confirmada!`;
+                        if(estadoTexto === "aprobado") {
+                            estiloCaja = "background: #d4efdf; color: #145a32; border: 1px solid #a9dfbf;";
+                            textoEstado = "✅ PAGO APROBADO";
                         } else if(estadoTexto === "rechazado") {
-                            cajaResultado.className = "resultado-estado estado-rechazada";
-                            mensajeInfo = `❌ Tu pago para el rodeo "${datos.rodeo}" (${datos.serie}) fue RECHAZADO. Comunícate con la administración.`;
+                            estiloCaja = "background: #fadbd8; color: #78281f; border: 1px solid #f5b7b1;";
+                            textoEstado = "❌ PAGO RECHAZADO";
+                        } else {
+                            estiloCaja = "background: #fcf3cf; color: #7d6608; border: 1px solid #f9e79f;";
+                            textoEstado = "⏳ PENDIENTE DE REVISIÓN";
                         }
-                        mensajeFinal += mensajeInfo + "<br><br>";
+
+                        listaInscripcionesHTML += `
+                            <div style="margin-top: 10px; padding: 10px; border-radius: 6px; text-align: left; ${estiloCaja}">
+                                <strong>Rodeo:</strong> ${datos.rodeo} <br>
+                                <strong>Serie:</strong> ${datos.serie} <br>
+                                <strong>Estado:</strong> ${textoEstado}
+                            </div>
+                        `;
                     });
-                    cajaResultado.innerHTML = mensajeFinal || "No se encontraron inscripciones vigentes.";
+
+                    if(encontradasVigentes === 0) {
+                        cajaResultado.className = "resultado-estado estado-rechazada";
+                        cajaResultado.innerText = "❌ No hay inscripciones vigentes registradas con este RUT.";
+                    } else {
+                        cajaResultado.className = "resultado-estado";
+                        cajaResultado.style.background = "#fff";
+                        cajaResultado.style.border = "1px solid #b2bec3";
+                        cajaResultado.style.color = "#2d3436";
+                        cajaResultado.innerHTML = listaInscripcionesHTML;
+                    }
                 }
             } catch (err) {
                 cajaResultado.className = "resultado-estado estado-rechazada";
