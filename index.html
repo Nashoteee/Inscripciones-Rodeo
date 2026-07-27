@@ -3,11 +3,12 @@
 <head>
     <meta charset="UTF-8">
     <meta name="viewport" content="width=device-width, initial-scale=1.0">
-    <title>Inscripciones de Rodeo</title>
+    <title>Inscripciones - Asociación de Rodeo Santiago Cumbre</title>
     <style>
         body { font-family: 'Segoe UI', Tahoma, Geneva, Verdana, sans-serif; background-color: #f9f9f9; padding: 20px; color: #333; }
         .container { max-width: 900px; margin: auto; background: white; padding: 20px; border-radius: 8px; box-shadow: 0 4px 8px rgba(0,0,0,0.1); }
         h1, h2, h3 { color: #2c3e50; text-align: center;}
+        .subtitulo-org { text-align: center; color: #7f8c8d; font-weight: bold; margin-top: -10px; margin-bottom: 25px; text-transform: uppercase; font-size: 0.9em; letter-spacing: 1px; }
         h3 { border-bottom: 2px solid #ecf0f1; padding-bottom: 10px; margin-top: 15px; }
         .section { margin-bottom: 30px; padding: 20px; border: 1px solid #e0e0e0; border-radius: 6px; background-color: #ffffff; }
         .form-group { margin-bottom: 15px; }
@@ -33,6 +34,7 @@
 <body>
     <div class="container">
         <h1>Sistema de Inscripciones</h1>
+        <div class="subtitulo-org">Asociación de Rodeo Santiago Cumbre</div>
 
         <div class="section" id="formulario">
             <h2>Formulario de Inscripción</h2>
@@ -70,7 +72,6 @@
                         <button type="button" id="btnQuitarJinete" class="btn-remove">- Quitar Último Jinete</button>
                     </div>
 
-                    <!-- NUEVA SECCIÓN DE PAGO -->
                     <div class="alerta-pago">
                         <h3>💳 Comprobante de Pago</h3>
                         <p style="font-size: 14px; color: #555; margin-bottom: 10px;">Para hacer válida la inscripción, es <strong>obligatorio</strong> adjuntar el comprobante de transferencia o depósito correspondiente.</p>
@@ -88,7 +89,6 @@
     <script type="module">
         import { initializeApp } from "https://www.gstatic.com/firebasejs/10.12.2/firebase-app.js";
         import { getFirestore, collection, addDoc, onSnapshot, query, where } from "https://www.gstatic.com/firebasejs/10.12.2/firebase-firestore.js";
-        // NUEVO: Importaciones de Storage para subir archivos
         import { getStorage, ref, uploadBytes, getDownloadURL } from "https://www.gstatic.com/firebasejs/10.12.2/firebase-storage.js";
 
         const firebaseConfig = {
@@ -102,7 +102,7 @@
 
         const app = initializeApp(firebaseConfig);
         const db = getFirestore(app);
-        const storage = getStorage(app); // Inicializar bodega
+        const storage = getStorage(app);
 
         const selectRodeo = document.getElementById('rodeo');
         const selectSerie = document.getElementById('serie');
@@ -206,7 +206,6 @@
             e.preventDefault();
             if(!selectSerie.value) return alert("Debes seleccionar una serie válida.");
             
-            // Validar que subió archivo
             const archivoComprobante = document.getElementById('comprobante').files[0];
             if(!archivoComprobante) return alert("Debes adjuntar el comprobante de pago.");
 
@@ -214,19 +213,18 @@
             btnRegistrar.disabled = true;
 
             try {
-                // 1. Subir el archivo a Firebase Storage
                 const nombreArchivoSeguro = Date.now() + "_" + archivoComprobante.name;
                 const storageReferencia = ref(storage, 'comprobantes/' + nombreArchivoSeguro);
                 
                 await uploadBytes(storageReferencia, archivoComprobante);
                 const urlDescargaComprobante = await getDownloadURL(storageReferencia);
 
-                // 2. Guardar la inscripción con la URL del comprobante
                 let datosAguardar = {
+                    asociacion: "Asociación de Rodeo Santiago Cumbre",
                     rodeo: document.getElementById('rodeo').value,
                     serie: document.getElementById('serie').value,
                     cantidadJinetes: totalJinetes,
-                    comprobanteUrl: urlDescargaComprobante, // Guardamos el link de la foto
+                    comprobanteUrl: urlDescargaComprobante,
                     fecha: Date.now(),
                     estado: "activo"
                 };
