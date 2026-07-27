@@ -39,6 +39,7 @@
         <h1>Sistema de Inscripciones</h1>
         <div class="subtitulo-org">Asociación de Rodeo Santiago Cumbre</div>
 
+        <!-- CONSULTAR ESTADO -->
         <div class="section seccion-consulta">
             <h3>🔍 Consultar Estado de Inscripción</h3>
             <p style="font-size: 14px; color: #555;">Ingresa el RUT del Primer Jinete y selecciona el rodeo para verificar tu pago:</p>
@@ -59,6 +60,7 @@
             <div id="resultadoEstado" class="resultado-estado"></div>
         </div>
 
+        <!-- FORMULARIO DE COLLERA -->
         <div class="section" id="formulario">
             <h2>Inscripción de Collera</h2>
             
@@ -86,6 +88,7 @@
 
                     <hr style="margin: 20px 0; border: 1px solid #eee;">
                     
+                    <!-- JINETE 1 -->
                     <div class="jinete-bloque">
                         <h3>🤠 Primer Jinete y su Caballo</h3>
                         <div class="form-group"><input type="text" id="nombre1" placeholder="Nombre completo del Primer Jinete" required></div>
@@ -96,6 +99,7 @@
                         <div class="form-group"><input type="tel" id="telefono1" placeholder="Teléfono de contacto (Opcional)"></div>
                     </div>
 
+                    <!-- JINETE 2 -->
                     <div class="jinete-bloque">
                         <h3>🤠 Segundo Jinete y su Caballo</h3>
                         <div class="form-group"><input type="text" id="nombre2" placeholder="Nombre completo del Segundo Jinete" required></div>
@@ -125,7 +129,7 @@
 
     <script type="module">
         import { initializeApp } from "https://www.gstatic.com/firebasejs/10.12.2/firebase-app.js";
-        import { getFirestore, collection, addDoc, onSnapshot, query, where, getDocs, updateDoc, doc } from "https://www.gstatic.com/firebasejs/10.12.2/firebase-firestore.js";
+        import { getFirestore, collection, addDoc, onSnapshot, query, where, getDocs, doc } from "https://www.gstatic.com/firebasejs/10.12.2/firebase-firestore.js";
 
         const firebaseConfig = {
           apiKey: "AIzaSyCqtSOu4YemJGUb9dRG_7IDZZBL4E3yNsM",
@@ -150,23 +154,37 @@
         let unsubscribeSeries = null; 
         let cronometroInterval = null;
 
-        onSnapshot(query(collection(db, "rodeos"), where("estado", "==", "abierto")), (snapshot) => {
-            selectRodeo.innerHTML = '<option value="">Seleccione el Rodeo...</option>';
-            filtroConsultaRodeo.innerHTML = '<option value="TODOS">🌐 Mostrar todos mis rodeos</option>';
-            
-            if(snapshot.empty) {
+        // Detector de Bloqueo Maestro del Desarrollador y Rodeos Abiertos
+        onSnapshot(doc(db, "config", "sistema"), (docSnap) => {
+            if(docSnap.exists() && docSnap.data().bloqueado) {
                 formDiv.style.display = "none";
                 msjCerrado.style.display = "block";
+                msjCerrado.innerHTML = "<h3>🔒 Sistema temporalmente en mantenimiento</h3><p>El acceso a inscripciones ha sido bloqueado temporalmente por la administración.</p>";
             } else {
-                formDiv.style.display = "block";
-                msjCerrado.style.display = "none";
-                snapshot.forEach(doc => {
-                    const nombreRodeo = doc.data().nombre;
-                    selectRodeo.innerHTML += `<option value="${nombreRodeo}">${nombreRodeo}</option>`;
-                    filtroConsultaRodeo.innerHTML += `<option value="${nombreRodeo}">${nombreRodeo}</option>`;
-                });
+                cargarRodeosAbiertos();
             }
         });
+
+        function cargarRodeosAbiertos() {
+            onSnapshot(query(collection(db, "rodeos"), where("estado", "==", "abierto")), (snapshot) => {
+                selectRodeo.innerHTML = '<option value="">Seleccione el Rodeo...</option>';
+                filtroConsultaRodeo.innerHTML = '<option value="TODOS">🌐 Mostrar todos mis rodeos</option>';
+                
+                if(snapshot.empty) {
+                    formDiv.style.display = "none";
+                    msjCerrado.style.display = "block";
+                    msjCerrado.innerHTML = "<h3>❌ No hay rodeos abiertos en este momento.</h3><p>Comunícate con la administración para más información.</p>";
+                } else {
+                    formDiv.style.display = "block";
+                    msjCerrado.style.display = "none";
+                    snapshot.forEach(doc => {
+                        const nombreRodeo = doc.data().nombre;
+                        selectRodeo.innerHTML += `<option value="${nombreRodeo}">${nombreRodeo}</option>`;
+                        filtroConsultaRodeo.innerHTML += `<option value="${nombreRodeo}">${nombreRodeo}</option>`;
+                    });
+                }
+            });
+        }
 
         window.consultarEstado = async function() {
             const rutBuscado = document.getElementById('rutConsulta').value.trim();
