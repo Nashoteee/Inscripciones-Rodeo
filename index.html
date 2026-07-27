@@ -169,7 +169,6 @@
         document.getElementById('btnQuitarJinete').addEventListener('click', quitarJinete);
         agregarJinete();
 
-        // Función para consultar estado público por RUT
         window.consultarEstado = async function() {
             const rutBuscado = document.getElementById('rutConsulta').value.trim();
             const cajaResultado = document.getElementById('resultadoEstado');
@@ -197,7 +196,7 @@
                         if(datos.estado === "eliminado") return;
 
                         let estadoTexto = datos.estadoPago || "pendiente";
-                        let mensajeInfo = ""; // <-- ¡Aquí estaba el error, faltaba declarar la variable!
+                        let mensajeInfo = "";
 
                         if(estadoTexto === "pendiente") {
                             cajaResultado.className = "resultado-estado estado-pendiente";
@@ -291,7 +290,7 @@
                     serie: document.getElementById('serie').value,
                     cantidadJinetes: totalJinetes,
                     comprobanteUrl: urlDescargaComprobante,
-                    estadoPago: "pendiente", // Estado inicial
+                    estadoPago: "pendiente",
                     fecha: Date.now(),
                     estado: "activo"
                 };
@@ -313,6 +312,9 @@
                 btnRegistrar.innerText = "Subir y Registrar Inscripción Completa"; btnRegistrar.disabled = false;
             }
         });
+    </script>
+</body>
+</html>
     </script>
 </body>
 </html>
