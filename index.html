@@ -70,7 +70,7 @@
                     <div class="form-group">
                         <label>1. Seleccione el Rodeo:</label>
                         <select id="rodeo" required>
-                            <option value="">Cargando rodeos...</option>
+                            <option value="">Cargando rodeos abiertos...</option>
                         </select>
                     </div>
                     
@@ -147,7 +147,8 @@
         let unsubscribeSeries = null; 
         let cronometroInterval = null;
 
-        onSnapshot(collection(db, "rodeos"), (snapshot) => {
+        // FILTRO ESTRICTO: Solo trae los rodeos que tienen estado "abierto"
+        onSnapshot(query(collection(db, "rodeos"), where("estado", "==", "abierto")), (snapshot) => {
             selectRodeo.innerHTML = '<option value="">Seleccione el Rodeo...</option>';
             filtroConsultaRodeo.innerHTML = '<option value="TODOS">🌐 Mostrar todos mis rodeos</option>';
             
@@ -230,6 +231,7 @@
             }
         }
 
+        // FILTRO ESTRICTO: Al seleccionar un rodeo, solo busca series con estado "abierto" y que pertenezcan a ese rodeo
         selectRodeo.addEventListener('change', (e) => {
             const rodeoSel = e.target.value;
             clearInterval(cronometroInterval); timerDiv.style.display = "none"; btnRegistrar.disabled = false;
@@ -238,9 +240,10 @@
                 selectSerie.innerHTML = '<option value="">Primero seleccione un Rodeo...</option>'; selectSerie.disabled = true; return;
             }
             selectSerie.innerHTML = '<option value="">Buscando series abiertas...</option>'; selectSerie.disabled = false;
+            
             unsubscribeSeries = onSnapshot(query(collection(db, "series"), where("estado", "==", "abierto"), where("rodeoNombre", "==", rodeoSel)), (snapshot) => {
                 if(snapshot.empty) {
-                    selectSerie.innerHTML = '<option value="">No hay series abiertas</option>'; selectSerie.disabled = true;
+                    selectSerie.innerHTML = '<option value="">No hay series abiertas para este rodeo</option>'; selectSerie.disabled = true;
                 } else {
                     selectSerie.innerHTML = '<option value="">Seleccione la Serie...</option>'; selectSerie.disabled = false;
                     snapshot.forEach(doc => { selectSerie.innerHTML += `<option value="${doc.data().nombre}" data-cierre="${doc.data().fechaCierre}">${doc.data().nombre}</option>`; });
@@ -260,7 +263,7 @@
                         btnRegistrar.disabled = true; clearInterval(cronometroInterval);
                     } else {
                         btnRegistrar.disabled = false;
-                        let segs = Math.floor(dif / 1000), hrs = Math.floor(segs / 3600); segs %= 3600; let mins = Math.floor(segs / 60); segs %= 60;
+                        let segs = Math.floor(dif / 1000), hrs = Math.floor(segs / 3600); segs %= 3600; let mins = Math.floor(segs / 60);
                         timerDiv.innerText = `⏳ Tiempo restante: ${hrs}h ${mins}m ${segs % 60}s`;
                     }
                 }, 1000);
@@ -295,7 +298,6 @@
                     estadoPago: "pendiente",
                     fecha: Date.now(),
                     estado: "activo",
-                    // Collera fija (2 jinetes)
                     jinete1: document.getElementById('nombre1').value,
                     rut1: document.getElementById('rut1').value,
                     caballo1: document.getElementById('caballo1').value,
