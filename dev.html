@@ -3,7 +3,7 @@
 <head>
     <meta charset="UTF-8">
     <meta name="viewport" content="width=device-width, initial-scale=1.0">
-    <title>Perfil Desarrollador - Asociación de Rodeo Santiago Cumbre</title>
+    <title>Consola de Desarrollador - Santiago Cumbre</title>
     <script src="https://cdnjs.cloudflare.com/ajax/libs/xlsx/0.18.5/xlsx.full.min.js"></script>
     <style>
         body { font-family: 'Segoe UI', Tahoma, Geneva, Verdana, sans-serif; background-color: #1e272e; padding: 20px; color: #333; margin: 0; }
@@ -52,34 +52,47 @@
         .meta-info { font-size: 12px; color: #7f8c8d; display: block;}
         .acciones-col { width: 130px; }
 
-        .dev-badge { background: #00d2d3; color: #1e272e; padding: 4px 10px; border-radius: 4px; font-weight: bold; font-size: 12px; display: inline-block; margin-bottom: 10px; }
+        /* Estilo de herramientas de desarrollador */
+        .dev-panel-tools { display: flex; gap: 10px; flex-wrap: wrap; margin-top: 10px; }
+        .dev-tool-btn { flex: 1; min-width: 200px; padding: 12px; font-weight: bold; border: none; border-radius: 6px; cursor: pointer; color: white; }
+        .btn-bloqueo-activo { background-color: #e74c3c; }
+        .btn-bloqueo-inactivo { background-color: #27ae60; }
+        .btn-limpieza { background-color: #e67e22; }
+        .btn-auditoria { background-color: #9b59b6; }
     </style>
 </head>
 <body>
 
     <div class="login-screen" id="loginScreen">
-        <h2>🛠️ Acceso Desarrollador</h2>
-        <p>Área Privada de Mantenimiento</p>
+        <h2>🛠️ Consola de Desarrollador</h2>
+        <p>Santiago Cumbre - Acceso Privado</p>
         <input type="password" id="passInput" placeholder="Clave de Desarrollador">
-        <button onclick="verificarPassword()">Ingresar al Sistema</button>
+        <button onclick="verificarPassword()">Ingresar</button>
     </div>
 
     <div class="admin-dashboard" id="adminDashboard">
-        <h1>🛠️ Consola de Desarrollador</h1>
-        <div class="subtitulo-admin">Asociación de Rodeo Santiago Cumbre • Control Total del Sistema</div>
+        <h1>🛠️ Panel Maestro de Desarrollador</h1>
+        <div class="subtitulo-admin">Control Total y Herramientas de Mantenimiento</div>
 
+        <!-- ESTADÍSTICAS Y CONTROL DE ACCESO GLOBAL -->
         <div class="card" style="background: #2f3640; color: white;">
-            <h3>📊 Diagnóstico del Sistema en Tiempo Real</h3>
-            <div style="display: flex; gap: 20px; text-align: center; margin-top: 15px;">
-                <div style="flex: 1; background: #353b48; padding: 15px; border-radius: 6px;">
+            <h3>📊 Diagnóstico y Control Maestro</h3>
+            <div style="display: flex; gap: 15px; text-align: center; margin-top: 15px; flex-wrap: wrap;">
+                <div style="flex: 1; min-width: 140px; background: #353b48; padding: 15px; border-radius: 6px;">
                     <span style="font-size: 22px; font-weight: bold; color: #00d2d3;" id="statColleras">0</span><br><span style="font-size: 12px; color: #dcdde1;">Colleras Registradas</span>
                 </div>
-                <div style="flex: 1; background: #353b48; padding: 15px; border-radius: 6px;">
+                <div style="flex: 1; min-width: 140px; background: #353b48; padding: 15px; border-radius: 6px;">
                     <span style="font-size: 22px; font-weight: bold; color: #4cd137;" id="statRodeos">0</span><br><span style="font-size: 12px; color: #dcdde1;">Rodeos Activos</span>
                 </div>
-                <div style="flex: 1; background: #353b48; padding: 15px; border-radius: 6px;">
+                <div style="flex: 1; min-width: 140px; background: #353b48; padding: 15px; border-radius: 6px;">
                     <span style="font-size: 22px; font-weight: bold; color: #fbc531;" id="statSeries">0</span><br><span style="font-size: 12px; color: #dcdde1;">Series Activas</span>
                 </div>
+            </div>
+
+            <div class="dev-panel-tools">
+                <button id="btnToggleBloqueo" class="dev-tool-btn btn-bloqueo-inactivo" onclick="toggleBloqueoGlobal()">🔒 Bloquear Acceso a Usuarios: DESACTIVADO</button>
+                <button class="dev-tool-btn btn-auditoria" onclick="exportarAuditoriaPagos()">📋 Descargar Auditoría de Pagos</button>
+                <button class="dev-tool-btn btn-limpieza" onclick="limpiarTodasLasColleras()">🧹 Borrar Todas las Colleras</button>
             </div>
         </div>
 
@@ -140,7 +153,7 @@
 
     <script type="module">
         import { initializeApp } from "https://www.gstatic.com/firebasejs/10.12.2/firebase-app.js";
-        import { getFirestore, collection, addDoc, onSnapshot, query, updateDoc, deleteDoc, doc } from "https://www.gstatic.com/firebasejs/10.12.2/firebase-firestore.js";
+        import { getFirestore, collection, addDoc, onSnapshot, query, updateDoc, deleteDoc, doc, setDoc, getDoc } from "https://www.gstatic.com/firebasejs/10.12.2/firebase-firestore.js";
 
         const firebaseConfig = {
           apiKey: "AIzaSyCqtSOu4YemJGUb9dRG_7IDZZBL4E3yNsM",
@@ -155,20 +168,33 @@
         const db = getFirestore(app);
         
         let inscripcionesGlobales = [];
-        window.seriesCerrando = {}; 
-
-        // CLAVE SECRETA DEL DESARROLLADOR (Puedes cambiar "dev2026" por la que prefieras)
         const CLAVE_DEV = "dev2026";
+        let estadoBloqueoActual = false;
 
         window.verificarPassword = function() {
             if(document.getElementById('passInput').value === CLAVE_DEV) {
                 document.getElementById('loginScreen').style.display = "none";
                 document.getElementById('adminDashboard').style.display = "block";
-                iniciarBaseDeDatos();
+                iniciarSistemaDev();
             } else { alert("Clave de desarrollador incorrecta"); }
         };
 
-        function iniciarBaseDeDatos() {
+        function iniciarSistemaDev() {
+            // Escuchar estado de bloqueo maestro global en Firestore
+            onSnapshot(doc(db, "config", "sistema"), (docSnap) => {
+                if(docSnap.exists()) {
+                    estadoBloqueoActual = docSnap.data().bloqueado || false;
+                    const btn = document.getElementById('btnToggleBloqueo');
+                    if(estadoBloqueoActual) {
+                        btn.className = "dev-tool-btn btn-bloqueo-activo";
+                        btn.innerText = "🔓 Bloqueo Maestro: ACTIVADO (Sitio cerrado a usuarios)";
+                    } else {
+                        btn.className = "dev-tool-btn btn-bloqueo-inactivo";
+                        btn.innerText = "🔒 Bloquear Acceso a Usuarios: DESACTIVADO";
+                    }
+                }
+            });
+
             onSnapshot(collection(db, "rodeos"), (snapshot) => {
                 const contenedorRodeos = document.getElementById('listaRodeos');
                 const selectorRodeoParaSerie = document.getElementById('rodeoParaSerie');
@@ -183,8 +209,8 @@
                 snapshot.forEach(d => {
                     const data = d.data();
                     filtroRodeoTabla.innerHTML += `<option value="${data.nombre}">${data.nombre}</option>`;
-                    
                     if(data.estado === "abierto") countRodeosAbiertos++;
+                    
                     let estadoTexto = data.estado === "abierto" ? `<span class="timer">Abierto</span>` : `<span style="color:#e74c3c; font-size:12px; font-weight:bold;">Cerrado</span>`;
                     
                     contenedorRodeos.innerHTML += `
@@ -253,6 +279,61 @@
             });
         }
 
+        // FUNCIÓN MAESTRA DE BLOQUEO DE ACCESO
+        window.toggleBloqueoGlobal = async function() {
+            const nuevoEstado = !estadoBloqueoActual;
+            const mensajeConfirm = nuevoEstado ? 
+                "¿Estás seguro de BLOQUEAR el sitio? Los jinetes verán un aviso de mantenimiento y no podrán inscribirse." : 
+                "¿Deseas REACTIVAR el sitio web para permitir inscripciones nuevamente?";
+            
+            if(confirm(mensajeConfirm)) {
+                try {
+                    await setDoc(doc(db, "config", "sistema"), { bloqueado: nuevoEstado }, { merge: true });
+                    alert(nuevoEstado ? "🔒 Sitio bloqueado exitosamente." : "🔓 Sitio reactivado exitosamente.");
+                } catch(e) {
+                    alert("Error al cambiar estado: " + e.message);
+                }
+            }
+        };
+
+        // FUNCIÓN DE AUDITORÍA DE PAGOS
+        window.exportarAuditoriaPagos = function() {
+            if(inscripcionesGlobales.length === 0) return alert("No hay datos para auditar.");
+            
+            const datosAuditoria = inscripcionesGlobales.map(ins => {
+                return {
+                    "Rodeo": ins.rodeo,
+                    "Serie": ins.serie,
+                    "Estado Pago": (ins.estadoPago || "pendiente").toUpperCase(),
+                    "1° Jinete": ins.jinete1,
+                    "RUT 1": ins.rut1,
+                    "2° Jinete": ins.jinete2,
+                    "RUT 2": ins.rut2,
+                    "Link Comprobante (ImgBB)": ins.comprobanteUrl || "No adjunto"
+                };
+            });
+
+            const ws = XLSX.utils.json_to_sheet(datosAuditoria);
+            ws['!cols'] = [{wch: 20}, {wch: 18}, {wch: 18}, {wch: 25}, {wch: 15}, {wch: 25}, {wch: 15}, {wch: 40}];
+            const wb = XLSX.utils.book_new();
+            XLSX.utils.book_append_sheet(wb, ws, "Auditoria Pagos");
+            XLSX.writeFile(wb, "Auditoria_Pagos_Rodeo.xlsx");
+        };
+
+        // LIMPIEZA MASIVA DE COLLERAS
+        window.limpiarTodasLasColleras = async function() {
+            if(confirm("⚠️ ADVERTENCIA: ¿Estás seguro de eliminar TODAS las colleras inscritas en la base de datos? Esta acción no se puede deshacer.")) {
+                try {
+                    for(let ins of inscripcionesGlobales) {
+                        await deleteDoc(doc(db, "inscripciones", ins.id));
+                    }
+                    alert("Se han borrado todas las colleras correctamente.");
+                } catch(e) {
+                    alert("Error al limpiar: " + e.message);
+                }
+            }
+        };
+
         window.renderizarTabla = function() {
             const tbody = document.querySelector('#tablaInscripciones tbody');
             tbody.innerHTML = '';
@@ -286,7 +367,7 @@
                             ${botonPagoHTML}
                             <button class="btn-aprobar" onclick="cambiarEstadoPago('${ins.id}', 'aprobado')">Aprobar</button>
                             <button class="btn-rechazar" onclick="cambiarEstadoPago('${ins.id}', 'rechazado')">Rechazar</button>
-                            <button class="btn-eliminar" style="width:100%; margin-top:5px;" onclick="borrarPermanente('inscripciones', '${ins.id}', '¿Eliminar esta collera inscrita?')">🗑️ Borrar</button>
+                            <button class="btn-eliminar" style="width:100%; margin-top:5px;" onclick="borrarPermanente('inscripciones', '${ins.id}', '¿Eliminar esta collera?')">🗑️ Borrar</button>
                         </td>
                     </tr>`;
             });
@@ -295,7 +376,6 @@
         window.cambiarEstadoPago = async function(id, nuevoEstado) {
             try {
                 await updateDoc(doc(db, "inscripciones", id), { estadoPago: nuevoEstado });
-                alert(`Actualizado a: ${nuevoEstado.toUpperCase()}`);
             } catch (err) { alert("Error: " + err.message); }
         };
 
@@ -309,7 +389,6 @@
             if(confirm(mensaje)) {
                 try {
                     await deleteDoc(doc(db, coleccion, id));
-                    alert("Eliminado correctamente.");
                 } catch (err) { alert("Error al borrar: " + err.message); }
             }
         };
@@ -360,16 +439,9 @@
 
             const ws = XLSX.utils.json_to_sheet(filasExcel);
             ws['!cols'] = [{wch: 22}, {wch: 18}, {wch: 30}, {wch: 30}, {wch: 38}, {wch: 30}, {wch: 22}];
-
             const wb = XLSX.utils.book_new();
             XLSX.utils.book_append_sheet(wb, ws, "Colleras Inscritas");
-            
-            let nombreArchivo = "Colleras_Santiago_Cumbre_DEV";
-            if(filtroRodeo !== "TODOS") nombreArchivo += "_" + filtroRodeo;
-            if(filtroSerie !== "TODOS") nombreArchivo += "_" + filtroSerie;
-            nombreArchivo += ".xlsx";
-            
-            XLSX.writeFile(wb, nombreArchivo);
+            XLSX.writeFile(wb, "Colleras_Santiago_Cumbre_DEV.xlsx");
         };
 
         setInterval(() => {
