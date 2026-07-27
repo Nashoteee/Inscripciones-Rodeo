@@ -3,7 +3,7 @@
 <head>
     <meta charset="UTF-8">
     <meta name="viewport" content="width=device-width, initial-scale=1.0">
-    <title>Inscripciones - Asociación de Rodeo Santiago Cumbre</title>
+    <title>Inscripciones por Collera - Asociación de Rodeo Santiago Cumbre</title>
     <style>
         body { font-family: 'Segoe UI', Tahoma, Geneva, Verdana, sans-serif; background-color: #f9f9f9; padding: 20px; color: #333; }
         .container { max-width: 900px; margin: auto; background: white; padding: 20px; border-radius: 8px; box-shadow: 0 4px 8px rgba(0,0,0,0.1); }
@@ -17,19 +17,12 @@
         button { cursor: pointer; background-color: #27ae60; color: white; border: none; font-weight: bold; margin-top: 10px; transition: 0.3s; }
         button:hover { background-color: #219150; }
         
-        .btn-add { background-color: #f39c12; margin-bottom: 10px; }
-        .btn-add:hover { background-color: #d68910; }
-        .btn-remove { background-color: #e74c3c; margin-bottom: 20px; display: none; }
-        .btn-remove:hover { background-color: #c0392b; }
-        
         .jinete-bloque { background: #fdf2e9; padding: 20px; border-radius: 8px; border: 1px solid #fae5d3; margin-bottom: 20px; }
         .mensaje-cerrado { display: none; background: #f8d7da; color: #721c24; padding: 20px; border-radius: 6px; text-align: center; border: 1px solid #f5c6cb; margin-bottom: 20px; }
         .admin-link { display: block; text-align: center; margin-top: 30px; color: #7f8c8d; text-decoration: none; font-size: 14px; }
         #tiempoRestante { display: none; color: #d35400; font-weight: bold; margin-top: 10px; font-family: monospace; font-size: 1.2em; background: #ffeaa7; padding: 8px; border-radius: 4px; text-align: center; border: 1px solid #f1c40f; }
         
-        .botones-dinamicos { display: flex; gap: 10px; }
         .alerta-pago { background-color: #e8f8f5; border: 1px solid #a3e4d7; padding: 15px; border-radius: 6px; margin-top: 20px; }
-        
         .seccion-consulta { background: #eaf2f8; border: 1px solid #a4b0be; padding: 15px; border-radius: 6px; margin-bottom: 25px; }
         .resultado-estado { margin-top: 15px; padding: 15px; border-radius: 6px; display: none; font-weight: bold; text-align: center; }
         .estado-pendiente { background: #fcf3cf; color: #7d6608; border: 1px solid #f9e79f; }
@@ -42,10 +35,10 @@
         <h1>Sistema de Inscripciones</h1>
         <div class="subtitulo-org">Asociación de Rodeo Santiago Cumbre</div>
 
-        <!-- SECCIÓN DE CONSULTAR ESTADO CON FILTRO -->
+        <!-- CONSULTAR ESTADO -->
         <div class="section seccion-consulta">
             <h3>🔍 Consultar Estado de Inscripción</h3>
-            <p style="font-size: 14px; color: #555;">Ingresa el RUT del Primer Jinete y selecciona el rodeo para ver el estado de tu pago:</p>
+            <p style="font-size: 14px; color: #555;">Ingresa el RUT del Primer Jinete y selecciona el rodeo para verificar tu pago:</p>
             
             <div class="form-group">
                 <label>RUT del Primer Jinete:</label>
@@ -63,8 +56,9 @@
             <div id="resultadoEstado" class="resultado-estado"></div>
         </div>
 
+        <!-- FORMULARIO DE COLLERA -->
         <div class="section" id="formulario">
-            <h2>Formulario de Inscripción</h2>
+            <h2>Inscripción de Collera</h2>
             
             <div id="mensajeCerrado" class="mensaje-cerrado">
                 <h3>❌ No hay rodeos abiertos en este momento.</h3>
@@ -90,20 +84,35 @@
 
                     <hr style="margin: 20px 0; border: 1px solid #eee;">
                     
-                    <div id="contenedorJinetes"></div>
+                    <!-- JINETE 1 Y SU CABALLO -->
+                    <div class="jinete-bloque">
+                        <h3>🤠 Primer Jinete y su Caballo</h3>
+                        <div class="form-group"><input type="text" id="nombre1" placeholder="Nombre completo del Primer Jinete" required></div>
+                        <div class="form-group"><input type="text" id="rut1" placeholder="RUT del Primer Jinete" required></div>
+                        <div class="form-group"><input type="text" id="caballo1" placeholder="Nombre del Primer Caballo" required></div>
+                        <div class="form-group"><input type="text" id="criadero1" placeholder="Criadero del Primer Caballo (Opcional)"></div>
+                        <div class="form-group"><input type="text" id="club1" placeholder="Asociación o Club" required></div>
+                        <div class="form-group"><input type="tel" id="telefono1" placeholder="Teléfono de contacto (Opcional)"></div>
+                    </div>
 
-                    <div class="botones-dinamicos">
-                        <button type="button" id="btnAgregarJinete" class="btn-add">+ Agregar Jinete (Máx 10)</button>
-                        <button type="button" id="btnQuitarJinete" class="btn-remove">- Quitar Último Jinete</button>
+                    <!-- JINETE 2 Y SU CABALLO -->
+                    <div class="jinete-bloque">
+                        <h3>🤠 Segundo Jinete y su Caballo</h3>
+                        <div class="form-group"><input type="text" id="nombre2" placeholder="Nombre completo del Segundo Jinete" required></div>
+                        <div class="form-group"><input type="text" id="rut2" placeholder="RUT del Segundo Jinete" required></div>
+                        <div class="form-group"><input type="text" id="caballo2" placeholder="Nombre del Segundo Caballo" required></div>
+                        <div class="form-group"><input type="text" id="criadero2" placeholder="Criadero del Segundo Caballo (Opcional)"></div>
+                        <div class="form-group"><input type="text" id="club2" placeholder="Asociación o Club" required></div>
+                        <div class="form-group"><input type="tel" id="telefono2" placeholder="Teléfono de contacto (Opcional)"></div>
                     </div>
 
                     <div class="alerta-pago">
-                        <h3>💳 Comprobante de Pago</h3>
-                        <p style="font-size: 14px; color: #555; margin-bottom: 10px;">Para hacer válida la inscripción, es <strong>obligatorio</strong> adjuntar el comprobante de transferencia o depósito correspondiente.</p>
+                        <h3>💳 Comprobante de Pago de la Collera</h3>
+                        <p style="font-size: 14px; color: #555; margin-bottom: 10px;">Adjunta la imagen del comprobante de transferencia:</p>
                         <input type="file" id="comprobante" accept="image/png, image/jpeg" required>
                     </div>
 
-                    <button type="submit" id="btnRegistrar">Subir y Registrar Inscripción Completa</button>
+                    <button type="submit" id="btnRegistrar">Subir y Registrar Collera Completa</button>
                 </form>
             </div>
         </div>
@@ -134,50 +143,10 @@
         const msjCerrado = document.getElementById('mensajeCerrado');
         const timerDiv = document.getElementById('tiempoRestante');
         const btnRegistrar = document.getElementById('btnRegistrar');
-        const contenedorJinetes = document.getElementById('contenedorJinetes');
         
         let unsubscribeSeries = null; 
         let cronometroInterval = null;
-        let totalJinetes = 0;
 
-        function generarBloqueJinete(num) {
-            return `
-            <div class="jinete-bloque" id="bloqueJinete${num}">
-                <h3>Datos del Jinete ${num}</h3>
-                <div class="form-group"><input type="text" id="nombre${num}" placeholder="Nombre del jinete ${num}" required></div>
-                <div class="form-group"><input type="text" id="rut${num}" placeholder="RUT del jinete ${num}" required></div>
-                <div class="form-group"><input type="text" id="caballo${num}" placeholder="Nombre del caballo" required></div>
-                <div class="form-group"><input type="text" id="criadero${num}" placeholder="Criadero del caballo (Opcional)"></div>
-                <div class="form-group"><input type="text" id="club${num}" placeholder="Asociación o club" required></div>
-                <div class="form-group"><input type="tel" id="telefono${num}" placeholder="Teléfono de contacto" required></div>
-            </div>`;
-        }
-
-        function agregarJinete() {
-            if(totalJinetes >= 10) return alert("El máximo permitido es de 10 jinetes por inscripción.");
-            totalJinetes++;
-            contenedorJinetes.insertAdjacentHTML('beforeend', generarBloqueJinete(totalJinetes));
-            actualizarBotonesJinetes();
-        }
-
-        function quitarJinete() {
-            if(totalJinetes > 1) {
-                document.getElementById(`bloqueJinete${totalJinetes}`).remove();
-                totalJinetes--;
-                actualizarBotonesJinetes();
-            }
-        }
-
-        function actualizarBotonesJinetes() {
-            document.getElementById('btnQuitarJinete').style.display = totalJinetes > 1 ? 'block' : 'none';
-            document.getElementById('btnAgregarJinete').style.display = totalJinetes < 10 ? 'block' : 'none';
-        }
-
-        document.getElementById('btnAgregarJinete').addEventListener('click', agregarJinete);
-        document.getElementById('btnQuitarJinete').addEventListener('click', quitarJinete);
-        agregarJinete();
-
-        // Cargar lista de rodeos disponibles en el selector de consulta y en el formulario
         onSnapshot(collection(db, "rodeos"), (snapshot) => {
             selectRodeo.innerHTML = '<option value="">Seleccione el Rodeo...</option>';
             filtroConsultaRodeo.innerHTML = '<option value="TODOS">🌐 Mostrar todos mis rodeos</option>';
@@ -216,66 +185,48 @@
 
                 if(snapshot.empty) {
                     cajaResultado.className = "resultado-estado estado-rechazada";
-                    cajaResultado.innerText = "❌ No se encontró ninguna inscripción activa con el RUT ingresado.";
+                    cajaResultado.innerText = "❌ No se encontró ninguna collera con este RUT como Primer Jinete.";
                 } else {
-                    let listaInscripcionesHTML = "<div style='font-weight: bold; margin-bottom: 10px; border-bottom: 1px solid #ccc; padding-bottom: 5px;'>📋 Resultado de la Consulta:</div>";
-                    let encontradasVigentes = 0;
+                    let listaHTML = "<div style='font-weight: bold; margin-bottom: 10px; border-bottom: 1px solid #ccc; padding-bottom: 5px;'>📋 Historial de Colleras:</div>";
+                    let count = 0;
 
                     snapshot.forEach(docSnap => {
                         const datos = docSnap.data();
                         if(datos.estado === "eliminado") return;
+                        if(rodeoSeleccionado !== "TODOS" && datos.rodeo !== rodeoSeleccionado) return;
 
-                        // Aplicar filtro de rodeo si no se seleccionó "TODOS"
-                        if(rodeoSeleccionado !== "TODOS" && datos.rodeo !== rodeoSeleccionado) {
-                            return; 
-                        }
-
-                        encontradasVigentes++;
+                        count++;
                         let estadoTexto = datos.estadoPago || "pendiente";
-                        let estiloCaja = "";
-                        let textoEstado = "";
+                        let estiloCaja = estadoTexto === "aprobado" ? "background: #d4efdf; color: #145a32; border: 1px solid #a9dfbf;" :
+                                         estadoTexto === "rechazado" ? "background: #fadbd8; color: #78281f; border: 1px solid #f5b7b1;" :
+                                         "background: #fcf3cf; color: #7d6608; border: 1px solid #f9e79f;";
+                        
+                        let textoEstado = estadoTexto === "aprobado" ? "✅ PAGO APROBADO" : estadoTexto === "rechazado" ? "❌ PAGO RECHAZADO" : "⏳ PENDIENTE DE REVISIÓN";
+                        let fechaForm = datos.fecha ? new Date(datos.fecha).toLocaleString() : "";
 
-                        if(estadoTexto === "aprobado") {
-                            estiloCaja = "background: #d4efdf; color: #145a32; border: 1px solid #a9dfbf;";
-                            textoEstado = "✅ PAGO APROBADO";
-                        } else if(estadoTexto === "rechazado") {
-                            estiloCaja = "background: #fadbd8; color: #78281f; border: 1px solid #f5b7b1;";
-                            textoEstado = "❌ PAGO RECHAZADO";
-                        } else {
-                            estiloCaja = "background: #fcf3cf; color: #7d6608; border: 1px solid #f9e79f;";
-                            textoEstado = "⏳ PENDIENTE DE REVISIÓN";
-                        }
-
-                        let fechaFormateada = "Fecha no registrada";
-                        if (datos.fecha) {
-                            const d = new Date(datos.fecha);
-                            fechaFormateada = d.toLocaleDateString() + " a las " + d.toLocaleTimeString([], { hour: '2-digit', minute: '2-digit' });
-                        }
-
-                        listaInscripcionesHTML += `
+                        listaHTML += `
                             <div style="margin-top: 10px; padding: 12px; border-radius: 6px; text-align: left; ${estiloCaja}">
-                                <strong>📅 Fecha:</strong> ${fechaFormateada} <br>
-                                <strong>🤠 Rodeo:</strong> ${datos.rodeo} <br>
-                                <strong>🐎 Serie:</strong> ${datos.serie} <br>
+                                <strong>📅 Fecha:</strong> ${fechaForm} <br>
+                                <strong>🤠 Rodeo:</strong> ${datos.rodeo} | <strong>Serie:</strong> ${datos.serie} <br>
+                                <strong>Collera:</strong> ${datos.jinete1} y ${datos.jinete2} <br>
                                 <strong>Estado:</strong> ${textoEstado}
                             </div>
                         `;
                     });
 
-                    if(encontradasVigentes === 0) {
+                    if(count === 0) {
                         cajaResultado.className = "resultado-estado estado-rechazada";
-                        cajaResultado.innerText = `❌ No hay inscripciones registradas para el rodeo seleccionado con este RUT.`;
+                        cajaResultado.innerText = "❌ No hay registros para el filtro seleccionado.";
                     } else {
                         cajaResultado.className = "resultado-estado";
                         cajaResultado.style.background = "#fff";
                         cajaResultado.style.border = "1px solid #b2bec3";
-                        cajaResultado.style.color = "#2d3436";
-                        cajaResultado.innerHTML = listaInscripcionesHTML;
+                        cajaResultado.innerHTML = listaHTML;
                     }
                 }
             } catch (err) {
                 cajaResultado.className = "resultado-estado estado-rechazada";
-                cajaResultado.innerText = "Error al consultar: " + err.message;
+                cajaResultado.innerText = "Error: " + err.message;
             }
         }
 
@@ -306,11 +257,11 @@
                     const dif = parseInt(cierre) - Date.now();
                     if(dif <= 0) {
                         timerDiv.innerText = "❌ Esta serie acaba de cerrar."; timerDiv.style.color = "#c0392b"; timerDiv.style.backgroundColor = "#fadbd8";
-                        btnRegistrar.disabled = true; btnRegistrar.style.backgroundColor = "#95a5a6"; clearInterval(cronometroInterval);
+                        btnRegistrar.disabled = true; clearInterval(cronometroInterval);
                     } else {
-                        btnRegistrar.disabled = false; btnRegistrar.style.backgroundColor = "#27ae60"; timerDiv.style.color = "#d35400"; timerDiv.style.backgroundColor = "#ffeaa7";
+                        btnRegistrar.disabled = false;
                         let segs = Math.floor(dif / 1000), hrs = Math.floor(segs / 3600); segs %= 3600; let mins = Math.floor(segs / 60); segs %= 60;
-                        timerDiv.innerText = `⏳ Tiempo restante para inscribirse: ${hrs}h ${mins}m ${s}s`;
+                        timerDiv.innerText = `⏳ Tiempo restante: ${hrs}h ${mins}m ${segs % 60}s`;
                     }
                 }, 1000);
             } else { timerDiv.style.display = "none"; }
@@ -318,12 +269,12 @@
 
         document.getElementById('registroForm').addEventListener('submit', async function(e) {
             e.preventDefault();
-            if(!selectSerie.value) return alert("Debes seleccionar una serie válida.");
+            if(!selectSerie.value) return alert("Selecciona una serie válida.");
             
             const archivoComprobante = document.getElementById('comprobante').files[0];
-            if(!archivoComprobante) return alert("Debes adjuntar el comprobante de pago.");
+            if(!archivoComprobante) return alert("Adjunta el comprobante de pago.");
 
-            btnRegistrar.innerText = "Subiendo comprobante y guardando... Espere"; 
+            btnRegistrar.innerText = "Subiendo imagen y registrando collera..."; 
             btnRegistrar.disabled = true;
 
             try {
@@ -332,43 +283,40 @@
                 formData.append("image", archivoComprobante);
 
                 const respuestaImgBB = await fetch(`https://api.imgbb.com/1/upload?key=${apiKeyImgBB}`, {
-                    method: "POST",
-                    body: formData
+                    method: "POST", body: formData
                 });
-                
                 const resultadoJson = await respuestaImgBB.json();
-                if(!resultadoJson.success) {
-                    throw new Error("No se pudo subir la imagen a ImgBB. Verifica tu API Key.");
-                }
-
-                const urlImagenSubida = resultadoJson.data.url;
+                if(!resultadoJson.success) throw new Error("Error al subir a ImgBB.");
 
                 let datosAguardar = {
-                    asociacion: "Asociación de Rodeo Santiago Cumbre",
                     rodeo: document.getElementById('rodeo').value,
                     serie: document.getElementById('serie').value,
-                    cantidadJinetes: totalJinetes,
-                    comprobanteUrl: urlImagenSubida,
+                    comprobanteUrl: resultadoJson.data.url,
                     estadoPago: "pendiente",
                     fecha: Date.now(),
-                    estado: "activo"
+                    estado: "activo",
+                    // Collera fija (2 jinetes)
+                    jinete1: document.getElementById('nombre1').value,
+                    rut1: document.getElementById('rut1').value,
+                    caballo1: document.getElementById('caballo1').value,
+                    criadero1: document.getElementById('criadero1').value || "Sin criadero",
+                    club1: document.getElementById('club1').value,
+                    telefono1: document.getElementById('telefono1').value || "-",
+
+                    jinete2: document.getElementById('nombre2').value,
+                    rut2: document.getElementById('rut2').value,
+                    caballo2: document.getElementById('caballo2').value,
+                    criadero2: document.getElementById('criadero2').value || "Sin criadero",
+                    club2: document.getElementById('club2').value,
+                    telefono2: document.getElementById('telefono2').value || "-"
                 };
 
-                for(let i = 1; i <= totalJinetes; i++) {
-                    datosAguardar[`jinete${i}`] = document.getElementById(`nombre${i}`).value;
-                    datosAguardar[`rut${i}`] = document.getElementById(`rut${i}`).value;
-                    datosAguardar[`caballo${i}`] = document.getElementById(`caballo${i}`).value;
-                    datosAguardar[`criadero${i}`] = document.getElementById(`criadero${i}`).value || "";
-                    datosAguardar[`club${i}`] = document.getElementById(`club${i}`).value;
-                    datosAguardar[`telefono${i}`] = document.getElementById(`telefono${i}`).value;
-                }
-
                 await addDoc(collection(db, "inscripciones"), datosAguardar);
-                alert("¡Inscripción de equipo guardada exitosamente!");
+                alert("¡Collera inscrita exitosamente!");
                 location.reload(); 
             } catch (error) {
-                alert("Error al guardar: " + error.message);
-                btnRegistrar.innerText = "Subir y Registrar Inscripción Completa"; 
+                alert("Error: " + error.message);
+                btnRegistrar.innerText = "Subir y Registrar Collera Completa"; 
                 btnRegistrar.disabled = false;
             }
         });
