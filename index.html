@@ -30,7 +30,6 @@
         .botones-dinamicos { display: flex; gap: 10px; }
         .alerta-pago { background-color: #e8f8f5; border: 1px solid #a3e4d7; padding: 15px; border-radius: 6px; margin-top: 20px; }
         
-        /* Caja de consulta de estado */
         .seccion-consulta { background: #eaf2f8; border: 1px solid #a4b0be; padding: 15px; border-radius: 6px; margin-bottom: 25px; }
         .resultado-estado { margin-top: 15px; padding: 15px; border-radius: 6px; display: none; font-weight: bold; text-align: center; }
         .estado-pendiente { background: #fcf3cf; color: #7d6608; border: 1px solid #f9e79f; }
@@ -43,7 +42,6 @@
         <h1>Sistema de Inscripciones</h1>
         <div class="subtitulo-org">Asociación de Rodeo Santiago Cumbre</div>
 
-        <!-- SECCIÓN DE CONSULTAR ESTADO -->
         <div class="section seccion-consulta">
             <h3>🔍 Consultar Estado de Inscripción</h3>
             <p style="font-size: 14px; color: #555;">Si ya te inscribiste, ingresa el RUT del Primer Jinete para verificar si tu pago fue aprobado:</p>
@@ -91,7 +89,7 @@
                     <div class="alerta-pago">
                         <h3>💳 Comprobante de Pago</h3>
                         <p style="font-size: 14px; color: #555; margin-bottom: 10px;">Para hacer válida la inscripción, es <strong>obligatorio</strong> adjuntar el comprobante de transferencia o depósito correspondiente.</p>
-                        <input type="file" id="comprobante" accept="image/png, image/jpeg, application/pdf" required>
+                        <input type="file" id="comprobante" accept="image/png, image/jpeg" required>
                     </div>
 
                     <button type="submit" id="btnRegistrar">Subir y Registrar Inscripción Completa</button>
@@ -105,7 +103,6 @@
     <script type="module">
         import { initializeApp } from "https://www.gstatic.com/firebasejs/10.12.2/firebase-app.js";
         import { getFirestore, collection, addDoc, onSnapshot, query, where, getDocs } from "https://www.gstatic.com/firebasejs/10.12.2/firebase-firestore.js";
-        import { getStorage, ref, uploadBytes, getDownloadURL } from "https://www.gstatic.com/firebasejs/10.12.2/firebase-storage.js";
 
         const firebaseConfig = {
           apiKey: "AIzaSyCqtSOu4YemJGUb9dRG_7IDZZBL4E3yNsM",
@@ -118,7 +115,6 @@
 
         const app = initializeApp(firebaseConfig);
         const db = getFirestore(app);
-        const storage = getStorage(app);
 
         const selectRodeo = document.getElementById('rodeo');
         const selectSerie = document.getElementById('serie');
@@ -188,7 +184,7 @@
 
                 if(snapshot.empty) {
                     cajaResultado.className = "resultado-estado estado-rechazada";
-                    cajaResultado.innerText = "❌ No se encontró ninguna inscripción activa con el RUT ingresado (Asegúrate de ingresar el RUT del Primer Jinete tal como se registró).";
+                    cajaResultado.innerText = "❌ No se encontró ninguna inscripción activa con el RUT ingresado.";
                 } else {
                     let mensajeFinal = "";
                     snapshot.forEach(docSnap => {
@@ -200,7 +196,7 @@
 
                         if(estadoTexto === "pendiente") {
                             cajaResultado.className = "resultado-estado estado-pendiente";
-                            mensajeInfo = `⏳ Tu inscripción para el rodeo "${datos.rodeo}" (${datos.serie}) está PENDIENTE DE REVISIÓN de pago por la administración.`;
+                            mensajeInfo = `⏳ Tu inscripción para el rodeo "${datos.rodeo}" (${datos.serie}) está PENDIENTE DE REVISIÓN de pago.`;
                         } else if(estadoTexto === "aprobado") {
                             cajaResultado.className = "resultado-estado estado-aprobada";
                             mensajeInfo = `✅ ¡FELICIDADES! Tu pago para el rodeo "${datos.rodeo}" (${datos.serie}) fue APROBADO. ¡Inscripción confirmada!`;
@@ -274,22 +270,33 @@
             const archivoComprobante = document.getElementById('comprobante').files[0];
             if(!archivoComprobante) return alert("Debes adjuntar el comprobante de pago.");
 
-            btnRegistrar.innerText = "Subiendo archivo e inscribiendo... Espere por favor"; 
+            btnRegistrar.innerText = "Subiendo comprobante y guardando... Espere"; 
             btnRegistrar.disabled = true;
 
             try {
-                const nombreArchivoSeguro = Date.now() + "_" + archivoComprobante.name;
-                const storageReferencia = ref(storage, 'comprobantes/' + nombreArchivoSeguro);
+                // Sube la imagen gratis a ImgBB
+                const apiKeyImgBB = "2f84ad94ca28ab56dceb42ea0a3fa7cc";
+                const formData = new FormData();
+                formData.append("image", archivoComprobante);
+
+                const respuestaImgBB = await fetch(`https://api.imgbb.com/1/upload?key=${apiKeyImgBB}`, {
+                    method: "POST",
+                    body: formData
+                });
                 
-                await uploadBytes(storageReferencia, archivoComprobante);
-                const urlDescargaComprobante = await getDownloadURL(storageReferencia);
+                const resultadoJson = await respuestaImgBB.json();
+                if(!resultadoJson.success) {
+                    throw new Error("No se pudo subir la imagen a ImgBB. Verifica tu API Key.");
+                }
+
+                const urlImagenSubida = resultadoJson.data.url; // Link directo de la foto
 
                 let datosAguardar = {
                     asociacion: "Asociación de Rodeo Santiago Cumbre",
                     rodeo: document.getElementById('rodeo').value,
                     serie: document.getElementById('serie').value,
                     cantidadJinetes: totalJinetes,
-                    comprobanteUrl: urlDescargaComprobante,
+                    comprobanteUrl: urlImagenSubida, // Guardamos el link gratuito
                     estadoPago: "pendiente",
                     fecha: Date.now(),
                     estado: "activo"
@@ -305,16 +312,14 @@
                 }
 
                 await addDoc(collection(db, "inscripciones"), datosAguardar);
-                alert("¡Inscripción de equipo guardada exitosamente! Ya puedes consultar tu estado con el RUT del primer jinete.");
+                alert("¡Inscripción de equipo guardada exitosamente!");
                 location.reload(); 
             } catch (error) {
                 alert("Error al guardar: " + error.message);
-                btnRegistrar.innerText = "Subir y Registrar Inscripción Completa"; btnRegistrar.disabled = false;
+                btnRegistrar.innerText = "Subir y Registrar Inscripción Completa"; 
+                btnRegistrar.disabled = false;
             }
         });
-    </script>
-</body>
-</html>
     </script>
 </body>
 </html>
