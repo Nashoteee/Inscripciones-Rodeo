@@ -35,7 +35,6 @@
         <h1>Sistema de Inscripciones</h1>
         <div class="subtitulo-org">Asociación de Rodeo Santiago Cumbre</div>
 
-        <!-- CONSULTAR ESTADO -->
         <div class="section seccion-consulta">
             <h3>🔍 Consultar Estado de Inscripción</h3>
             <p style="font-size: 14px; color: #555;">Ingresa el RUT del Primer Jinete y selecciona el rodeo para verificar tu pago:</p>
@@ -56,7 +55,6 @@
             <div id="resultadoEstado" class="resultado-estado"></div>
         </div>
 
-        <!-- FORMULARIO DE COLLERA -->
         <div class="section" id="formulario">
             <h2>Inscripción de Collera</h2>
             
@@ -84,7 +82,6 @@
 
                     <hr style="margin: 20px 0; border: 1px solid #eee;">
                     
-                    <!-- JINETE 1 Y SU CABALLO -->
                     <div class="jinete-bloque">
                         <h3>🤠 Primer Jinete y su Caballo</h3>
                         <div class="form-group"><input type="text" id="nombre1" placeholder="Nombre completo del Primer Jinete" required></div>
@@ -95,7 +92,6 @@
                         <div class="form-group"><input type="tel" id="telefono1" placeholder="Teléfono de contacto (Opcional)"></div>
                     </div>
 
-                    <!-- JINETE 2 Y SU CABALLO -->
                     <div class="jinete-bloque">
                         <h3>🤠 Segundo Jinete y su Caballo</h3>
                         <div class="form-group"><input type="text" id="nombre2" placeholder="Nombre completo del Segundo Jinete" required></div>
@@ -122,7 +118,7 @@
 
     <script type="module">
         import { initializeApp } from "https://www.gstatic.com/firebasejs/10.12.2/firebase-app.js";
-        import { getFirestore, collection, addDoc, onSnapshot, query, where, getDocs } from "https://www.gstatic.com/firebasejs/10.12.2/firebase-firestore.js";
+        import { getFirestore, collection, addDoc, onSnapshot, query, where, getDocs, updateDoc, doc } from "https://www.gstatic.com/firebasejs/10.12.2/firebase-firestore.js";
 
         const firebaseConfig = {
           apiKey: "AIzaSyCqtSOu4YemJGUb9dRG_7IDZZBL4E3yNsM",
@@ -147,7 +143,6 @@
         let unsubscribeSeries = null; 
         let cronometroInterval = null;
 
-        // FILTRO ESTRICTO: Solo trae los rodeos que tienen estado "abierto"
         onSnapshot(query(collection(db, "rodeos"), where("estado", "==", "abierto")), (snapshot) => {
             selectRodeo.innerHTML = '<option value="">Seleccione el Rodeo...</option>';
             filtroConsultaRodeo.innerHTML = '<option value="TODOS">🌐 Mostrar todos mis rodeos</option>';
@@ -231,7 +226,6 @@
             }
         }
 
-        // FILTRO ESTRICTO: Al seleccionar un rodeo, solo busca series con estado "abierto" y que pertenezcan a ese rodeo
         selectRodeo.addEventListener('change', (e) => {
             const rodeoSel = e.target.value;
             clearInterval(cronometroInterval); timerDiv.style.display = "none"; btnRegistrar.disabled = false;
@@ -246,28 +240,61 @@
                     selectSerie.innerHTML = '<option value="">No hay series abiertas para este rodeo</option>'; selectSerie.disabled = true;
                 } else {
                     selectSerie.innerHTML = '<option value="">Seleccione la Serie...</option>'; selectSerie.disabled = false;
-                    snapshot.forEach(doc => { selectSerie.innerHTML += `<option value="${doc.data().nombre}" data-cierre="${doc.data().fechaCierre}">${doc.data().nombre}</option>`; });
+                    snapshot.forEach(doc => { 
+                        selectSerie.innerHTML += `<option value="${doc.data().nombre}" data-cierre="${doc.data().fechaCierre}" data-id="${doc.id}">${doc.data().nombre}</option>`; 
+                    });
                 }
             });
         });
 
+        // Verificación de cronómetro activo o cerrado manualmente en tiempo real
         selectSerie.addEventListener('change', () => {
             clearInterval(cronometroInterval);
-            const cierre = selectSerie.options[selectSerie.selectedIndex].getAttribute('data-cierre');
+            const opcionSeleccionada = selectSerie.options[selectSerie.selectedIndex];
+            const cierre = opcionSeleccionada.getAttribute('data-cierre');
+            const serieId = opcionSeleccionada.getAttribute('data-id');
+
+            if (!serieId) {
+                timerDiv.style.display = "none";
+                return;
+            }
+
+            // Escuchar cambios individuales por si el admin la cierra manualmente
+            onSnapshot(doc(db, "series", serieId), (docSnap) => {
+                if (docSnap.exists() && docSnap.data().estado === "cerrado") {
+                    clearInterval(cronometroInterval);
+                    timerDiv.style.display = "block";
+                    timerDiv.innerText = "❌ Esta serie acaba de ser cerrada por la administración.";
+                    timerDiv.style.color = "#c0392b"; 
+                    timerDiv.style.backgroundColor = "#fadbd8";
+                    btnRegistrar.disabled = true; 
+                    btnRegistrar.style.backgroundColor = "#95a5a6";
+                }
+            });
+
             if(cierre && cierre !== "undefined") {
                 timerDiv.style.display = "block";
                 cronometroInterval = setInterval(() => {
                     const dif = parseInt(cierre) - Date.now();
                     if(dif <= 0) {
-                        timerDiv.innerText = "❌ Esta serie acaba de cerrar."; timerDiv.style.color = "#c0392b"; timerDiv.style.backgroundColor = "#fadbd8";
-                        btnRegistrar.disabled = true; clearInterval(cronometroInterval);
+                        timerDiv.innerText = "❌ Esta serie acaba de cerrar por tiempo."; 
+                        timerDiv.style.color = "#c0392b"; 
+                        timerDiv.style.backgroundColor = "#fadbd8";
+                        btnRegistrar.disabled = true; 
+                        btnRegistrar.style.backgroundColor = "#95a5a6"; 
+                        clearInterval(cronometroInterval);
                     } else {
-                        btnRegistrar.disabled = false;
+                        btnRegistrar.disabled = false; 
+                        btnRegistrar.style.backgroundColor = "#27ae60"; 
+                        timerDiv.style.color = "#d35400"; 
+                        timerDiv.style.backgroundColor = "#ffeaa7";
                         let segs = Math.floor(dif / 1000), hrs = Math.floor(segs / 3600); segs %= 3600; let mins = Math.floor(segs / 60);
-                        timerDiv.innerText = `⏳ Tiempo restante: ${hrs}h ${mins}m ${segs % 60}s`;
+                        timerDiv.innerText = `⏳ Tiempo restante para inscribirse: ${hrs}h ${mins}m ${segs % 60}s`;
                     }
                 }, 1000);
-            } else { timerDiv.style.display = "none"; }
+            } else { 
+                timerDiv.style.display = "none"; 
+            }
         });
 
         document.getElementById('registroForm').addEventListener('submit', async function(e) {
