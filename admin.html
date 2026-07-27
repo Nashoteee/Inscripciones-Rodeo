@@ -79,8 +79,8 @@
                 <h3>🐎 Gestión de Series</h3>
                 <select id="rodeoParaSerie"><option value="">Cargando...</option></select>
                 <input type="text" id="nuevaSerie" placeholder="Nombre de la serie">
-                <input type="number" id="tiempoSerie" placeholder="Minutos que estará abierta" min="1">
-                <button class="btn-crear" onclick="crearSerie()">+ Abrir Nueva Serie con Temporizador</button>
+                <input type="number" id="tiempoSerie" placeholder="Minutos de duración (Cronómetro)" min="1">
+                <button class="btn-crear" onclick="crearSerie()">+ Abrir Serie con Temporizador</button>
                 <h4>Series Registradas:</h4>
                 <div id="listaSeries"></div>
             </div>
@@ -191,13 +191,18 @@
                     const data = d.data();
                     filtroSerieTabla.innerHTML += `<option value="${data.nombre}">${data.nombre} (${data.rodeoNombre})</option>`;
                     
-                    let estadoSerieTxt = data.estado === "abierto" ? `<span class="timer-countdown">Abierta</span>` : `<span style="color:#e74c3c; font-size:12px; font-weight:bold;">Cerrada</span>`;
+                    let infoEstadoSerie = "";
+                    if(data.estado === "abierto") {
+                        infoEstadoSerie = `<span class="timer-countdown" data-cierre="${data.fechaCierre}" data-id="${d.id}">Calculando...</span>`;
+                    } else {
+                        infoEstadoSerie = `<span style="color:#e74c3c; font-size:12px; font-weight:bold;">Cerrada Manualmente</span>`;
+                    }
 
                     contenedor.innerHTML += `
                         <div class="item-lista">
                             <div>
                                 <strong>${data.nombre}</strong> <br>
-                                <span class="etiqueta-rodeo">${data.rodeoNombre}</span> | ${estadoSerieTxt}
+                                <span class="etiqueta-rodeo">${data.rodeoNombre}</span> | ${infoEstadoSerie}
                             </div>
                             <div class="botones-item">
                                 <button class="btn-cerrar" onclick="cambiarEstadoItem('series', '${d.id}', '${data.estado === "abierto" ? "cerrado" : "abierto"}')">${data.estado === "abierto" ? "Cerrar" : "Abrir"}</button>
@@ -291,7 +296,8 @@
             const rodeo = document.getElementById('rodeoParaSerie').value;
             const serie = document.getElementById('nuevaSerie').value;
             const minutos = parseInt(document.getElementById('tiempoSerie').value);
-            if(!rodeo || !serie || !minutos) return alert("Completa todos los campos");
+            if(!rodeo || !serie || !minutos) return alert("Completa todos los campos (incluyendo los minutos del cronómetro)");
+            
             await addDoc(collection(db, "series"), { 
                 nombre: serie, rodeoNombre: rodeo, estado: "abierto", 
                 fechaApertura: Date.now(), fechaCierre: Date.now() + (minutos * 60 * 1000)
@@ -339,6 +345,25 @@
             
             XLSX.writeFile(wb, nombreArchivo);
         };
+
+        // Temporizador de cuenta regresiva en el panel de administración
+        setInterval(() => {
+            document.querySelectorAll('.timer-countdown').forEach(el => {
+                const cierre = parseInt(el.getAttribute('data-cierre'));
+                const idSerie = el.getAttribute('data-id');
+                const dif = cierre - Date.now();
+                
+                if (dif <= 0) {
+                    el.innerText = "⏳ Tiempo expirado"; 
+                    el.style.color = "#c0392b";
+                    // Cerrar automáticamente en la base de datos si expiró el tiempo
+                    updateDoc(doc(db, "series", idSerie), { estado: "cerrado" }).catch(()=>{});
+                } else {
+                    let s = Math.floor(dif / 1000), h = Math.floor(s / 3600); s %= 3600; let m = Math.floor(s / 60);
+                    el.innerText = `⏳ Faltan: ${h}h ${m}m ${s % 60}s`;
+                }
+            });
+        }, 1000);
     </script>
 </body>
 </html>
