@@ -210,10 +210,18 @@
                             textoEstado = "⏳ PENDIENTE DE REVISIÓN";
                         }
 
+                        // Formatear la fecha guardada en milisegundos
+                        let fechaFormateada = "Fecha no registrada";
+                        if (datos.fecha) {
+                            const d = new Date(datos.fecha);
+                            fechaFormateada = d.toLocaleDateString() + " a las " + d.toLocaleTimeString([], { hour: '2-digit', minute: '2-digit' });
+                        }
+
                         listaInscripcionesHTML += `
-                            <div style="margin-top: 10px; padding: 10px; border-radius: 6px; text-align: left; ${estiloCaja}">
-                                <strong>Rodeo:</strong> ${datos.rodeo} <br>
-                                <strong>Serie:</strong> ${datos.serie} <br>
+                            <div style="margin-top: 10px; padding: 12px; border-radius: 6px; text-align: left; ${estiloCaja}">
+                                <strong>📅 Fecha:</strong> ${fechaFormateada} <br>
+                                <strong>🤠 Rodeo:</strong> ${datos.rodeo} <br>
+                                <strong>🐎 Serie:</strong> ${datos.serie} <br>
                                 <strong>Estado:</strong> ${textoEstado}
                             </div>
                         `;
@@ -296,7 +304,6 @@
             btnRegistrar.disabled = true;
 
             try {
-                // Sube la imagen gratis a ImgBB
                 const apiKeyImgBB = "2f84ad94ca28ab56dceb42ea0a3fa7cc";
                 const formData = new FormData();
                 formData.append("image", archivoComprobante);
@@ -311,16 +318,16 @@
                     throw new Error("No se pudo subir la imagen a ImgBB. Verifica tu API Key.");
                 }
 
-                const urlImagenSubida = resultadoJson.data.url; // Link directo de la foto
+                const urlImagenSubida = resultadoJson.data.url;
 
                 let datosAguardar = {
                     asociacion: "Asociación de Rodeo Santiago Cumbre",
                     rodeo: document.getElementById('rodeo').value,
                     serie: document.getElementById('serie').value,
                     cantidadJinetes: totalJinetes,
-                    comprobanteUrl: urlImagenSubida, // Guardamos el link gratuito
+                    comprobanteUrl: urlImagenSubida,
                     estadoPago: "pendiente",
-                    fecha: Date.now(),
+                    fecha: Date.now(), // Guarda la fecha y hora exacta
                     estado: "activo"
                 };
 
