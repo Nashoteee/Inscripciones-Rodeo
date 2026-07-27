@@ -28,11 +28,8 @@
         .btn-excel { background-color: #27ae60; color: white; border: none; font-weight: bold; cursor: pointer; margin-bottom: 15px;}
         
         .btn-pago { background-color: #f1c40f; color: #2c3e50; font-weight: bold; padding: 5px 10px; border-radius: 4px; text-decoration: none; display: inline-block; width: 100%; box-sizing: border-box; text-align: center; margin-bottom: 5px; border: none; font-size: 13px;}
-        .btn-pago:hover { background-color: #f39c12; }
         .btn-aprobar { background-color: #27ae60; color: white; font-weight: bold; padding: 5px 10px; border-radius: 4px; border: none; cursor: pointer; width: 100%; margin-bottom: 5px; font-size: 13px; }
-        .btn-aprobar:hover { background-color: #219150; }
         .btn-rechazar { background-color: #c0392b; color: white; font-weight: bold; padding: 5px 10px; border-radius: 4px; border: none; cursor: pointer; width: 100%; margin-bottom: 5px; font-size: 13px; }
-        .btn-rechazar:hover { background-color: #a93226; }
 
         .badge-pendiente { background: #fcf3cf; color: #b7950b; padding: 3px 8px; border-radius: 4px; font-size: 11px; font-weight: bold; display: inline-block; margin-bottom: 5px;}
         .badge-aprobado { background: #d4efdf; color: #1e8449; padding: 3px 8px; border-radius: 4px; font-size: 11px; font-weight: bold; display: inline-block; margin-bottom: 5px;}
@@ -49,9 +46,6 @@
         table { width: 100%; border-collapse: collapse; margin-top: 15px; font-size: 14px; }
         th, td { border: 1px solid #ddd; padding: 10px; text-align: left; vertical-align: top;}
         th { background-color: #f4f4f4; color: #333;}
-        
-        .jinete-fila { border-bottom: 1px dashed #ccc; padding-bottom: 5px; margin-bottom: 5px; }
-        .jinete-fila:last-child { border-bottom: none; margin-bottom: 0; padding-bottom: 0; }
         .meta-info { font-size: 12px; color: #7f8c8d; display: block;}
         .acciones-col { width: 130px; }
     </style>
@@ -90,7 +84,7 @@
         </div>
 
         <div class="card">
-            <h3>📋 Base de Datos de Inscripciones</h3>
+            <h3>📋 Base de Datos de Colleras Inscritas</h3>
             
             <div class="filtros-container">
                 <div style="flex: 1;">
@@ -107,20 +101,18 @@
                 </div>
             </div>
 
-            <button class="btn-excel" onclick="exportarExcel()">📥 Descargar a Excel Organizado</button>
+            <button class="btn-excel" onclick="exportarExcel()">📥 Descargar Excel Optimizado de Colleras</button>
             
             <div style="overflow-x: auto;">
                 <table id="tablaInscripciones">
                     <thead>
                         <tr>
                             <th>Serie / Rodeo</th>
-                            <th>Jinetes Inscritos (Max 10)</th>
+                            <th>Datos de la Collera</th>
                             <th class="acciones-col">Acción / Pago</th>
                         </tr>
                     </thead>
-                    <tbody>
-                        <!-- Filas dinámicas -->
-                    </tbody>
+                    <tbody></tbody>
                 </table>
             </div>
         </div>
@@ -226,36 +218,24 @@
                 if (filtroRodeo !== "TODOS" && ins.rodeo !== filtroRodeo) return;
                 if (filtroSerie !== "TODOS" && ins.serie !== filtroSerie) return;
 
-                let jinetesHTML = "";
-                let maxJinetes = ins.cantidadJinetes || (ins.jinete2 ? 2 : 1); 
-                
-                for(let i = 1; i <= maxJinetes; i++) {
-                    if(ins[`jinete${i}`]) {
-                        const clubTxt = ins[`club${i}`] || ins.club || 'Sin Club';
-                        const fonoTxt = ins[`telefono${i}`] || ins.telefono || '-';
-                        const criaderoTxt = ins[`criadero${i}`] ? `(Criadero: ${ins[`criadero${i}`]})` : '';
-                        
-                        jinetesHTML += `
-                            <div class="jinete-fila">
-                                <strong>${i}. ${ins[`jinete${i}`]}</strong> [RUT: ${ins[`rut${i}`]}]<br>
-                                <span class="meta-info">🐴 Caballo: ${ins[`caballo${i}`]} ${criaderoTxt}</span>
-                                <span class="meta-info">📞 ${fonoTxt} | 🛡️ Club: ${clubTxt}</span>
-                            </div>`;
-                    }
-                }
+                let colleraHTML = `
+                    <div style="margin-bottom: 6px;"><strong>1° Jinete:</strong> ${ins.jinete1} [RUT: ${ins.rut1}]<br>
+                    <span class="meta-info">🐴 Caballo: ${ins.caballo1} (${ins.criadero1}) | Club: ${ins.club1} | 📞 ${ins.telefono1}</span></div>
+                    <div><strong>2° Jinete:</strong> ${ins.jinete2} [RUT: ${ins.rut2}]<br>
+                    <span class="meta-info">🐴 Caballo: ${ins.caballo2} (${ins.criadero2}) | Club: ${ins.club2} | 📞 ${ins.telefono2}</span></div>
+                `;
 
                 let estadoPago = ins.estadoPago || "pendiente";
-                let badgeEstado = "";
-                if(estadoPago === "aprobado") badgeEstado = `<span class="badge-aprobado">✅ APROBADO</span>`;
-                else if(estadoPago === "rechazado") badgeEstado = `<span class="badge-rechazado">❌ RECHAZADO</span>`;
-                else badgeEstado = `<span class="badge-pendiente">⏳ PENDIENTE</span>`;
+                let badgeEstado = estadoPago === "aprobado" ? `<span class="badge-aprobado">✅ APROBADO</span>` :
+                                  estadoPago === "rechazado" ? `<span class="badge-rechazado">❌ RECHAZADO</span>` :
+                                  `<span class="badge-pendiente">⏳ PENDIENTE</span>`;
 
-                let botonPagoHTML = ins.comprobanteUrl ? `<a href="${ins.comprobanteUrl}" target="_blank" class="btn-pago">👁️ Ver Pago</a>` : `<span class="meta-info" style="color:#e74c3c;">Sin comprobante</span>`;
+                let botonPagoHTML = ins.comprobanteUrl ? `<a href="${ins.comprobanteUrl}" target="_blank" class="btn-pago">👁️ Ver Pago</a>` : '';
 
                 tbody.innerHTML += `
                     <tr>
                         <td><strong>${ins.serie}</strong><br><span class="meta-info">${ins.rodeo}</span></td>
-                        <td>${jinetesHTML}</td>
+                        <td>${colleraHTML}</td>
                         <td class="acciones-col">
                             ${badgeEstado}
                             ${botonPagoHTML}
@@ -270,15 +250,13 @@
         window.cambiarEstadoPago = async function(id, nuevoEstado) {
             try {
                 await updateDoc(doc(db, "inscripciones", id), { estadoPago: nuevoEstado });
-                alert(`Inscripción marcada como: ${nuevoEstado.toUpperCase()}`);
-            } catch (err) {
-                alert("Error al actualizar: " + err.message);
-            }
+                alert(`Actualizado a: ${nuevoEstado.toUpperCase()}`);
+            } catch (err) { alert("Error: " + err.message); }
         };
 
         window.crearRodeo = async function() {
             const nombre = document.getElementById('nuevoRodeo').value;
-            if(!nombre) return alert("Escribe un nombre para el Rodeo");
+            if(!nombre) return alert("Escribe un nombre");
             await addDoc(collection(db, "rodeos"), { nombre: nombre, estado: "abierto", fechaApertura: Date.now() });
             document.getElementById('nuevoRodeo').value = '';
         };
@@ -287,8 +265,7 @@
             const rodeo = document.getElementById('rodeoParaSerie').value;
             const serie = document.getElementById('nuevaSerie').value;
             const minutos = parseInt(document.getElementById('tiempoSerie').value);
-            if(!rodeo || !serie || !minutos) return alert("Selecciona un Rodeo, Serie y Tiempo válido.");
-            
+            if(!rodeo || !serie || !minutos) return alert("Completa todos los campos");
             await addDoc(collection(db, "series"), { 
                 nombre: serie, rodeoNombre: rodeo, estado: "abierto", 
                 fechaApertura: Date.now(), fechaCierre: Date.now() + (minutos * 60 * 1000)
@@ -297,7 +274,7 @@
         };
 
         window.cerrarItem = async function(coleccion, id) {
-            if(confirm("¿Cerrar esto?")) await updateDoc(doc(db, coleccion, id), { estado: "cerrado" });
+            if(confirm("¿Cerrar?")) await updateDoc(doc(db, coleccion, id), { estado: "cerrado" });
         };
 
         window.cerrarItemAutomatico = async function(id) {
@@ -306,10 +283,10 @@
         }
 
         window.borrarSeguro = async function(id) {
-            if(confirm("¿Borrar a este equipo de la pantalla?")) await updateDoc(doc(db, "inscripciones", id), { estado: "eliminado" });
+            if(confirm("¿Borrar collera?")) await updateDoc(doc(db, "inscripciones", id), { estado: "eliminado" });
         };
 
-        // EXCEL OPTIMIZADO Y LIMPIO: Sin asociación, sin estado de pago y sin links molestos
+        // EXCEL OPTIMIZADO PARA COLLERAS (Datos agrupados en celdas limpias)
         window.exportarExcel = function() {
             const filtroRodeo = document.getElementById('filtroRodeoTabla').value;
             const filtroSerie = document.getElementById('filtroSerieTabla').value;
@@ -321,49 +298,36 @@
                 return true;
             });
 
-            if(datosAExportar.length === 0) return alert("No hay datos para exportar con este filtro.");
+            if(datosAExportar.length === 0) return alert("No hay datos para exportar.");
             
-            let filasExcelLimpias = [];
-
-            datosAExportar.forEach(ins => {
-                let maxJinetes = ins.cantidadJinetes || (ins.jinete2 ? 2 : 1);
-                
-                for(let i = 1; i <= maxJinetes; i++) {
-                    if(ins[`jinete${i}`]) {
-                        filasExcelLimpias.push({
-                            "Rodeo": ins.rodeo,
-                            "Serie": ins.serie,
-                            "Posición": `${i}° Jinete`,
-                            "Nombre del Jinete": ins[`jinete${i}`] || '-',
-                            "RUT": ins[`rut${i}`] || '-',
-                            "Nombre del Caballo": ins[`caballo${i}`] || '-',
-                            "Criadero": ins[`criadero${i}`] || '-',
-                            "Club / Asociación": ins[`club${i}`] || ins.club || '-',
-                            "Teléfono de Contacto": ins[`telefono${i}`] || ins.telefono || '-'
-                        });
-                    }
-                }
+            let filasExcel = datosAExportar.map(ins => {
+                return {
+                    "Rodeo": ins.rodeo,
+                    "Serie": ins.serie,
+                    "Primer Jinete": `${ins.jinete1} (RUT: ${ins.rut1})`,
+                    "Segundo Jinete": `${ins.jinete2} (RUT: ${ins.rut2})`,
+                    "Caballos y Criaderos": `1. ${ins.caballo1} [Criadero: ${ins.criadero1}] \n2. ${ins.caballo2} [Criadero: ${ins.criadero2}]`,
+                    "Clubes / Asociaciones": `1. ${ins.club1} \n2. ${ins.club2}`,
+                    "Teléfonos": `1. ${ins.telefono1} \n2. ${ins.telefono2}`
+                };
             });
 
-            const ws = XLSX.utils.json_to_sheet(filasExcelLimpias);
+            const ws = XLSX.utils.json_to_sheet(filasExcel);
 
-            // Anchos de columna limpios y profesionales
             ws['!cols'] = [
-                {wch: 24}, // Rodeo
+                {wch: 22}, // Rodeo
                 {wch: 18}, // Serie
-                {wch: 12}, // Posición
-                {wch: 28}, // Nombre Jinete
-                {wch: 15}, // RUT
-                {wch: 22}, // Caballo
-                {wch: 20}, // Criadero
-                {wch: 25}, // Club
-                {wch: 18}  // Teléfono
+                {wch: 30}, // 1° Jinete
+                {wch: 30}, // 2° Jinete
+                {wch: 38}, // Caballos
+                {wch: 30}, // Clubes
+                {wch: 22}  // Teléfonos
             ];
 
             const wb = XLSX.utils.book_new();
-            XLSX.utils.book_append_sheet(wb, ws, "Inscripciones");
+            XLSX.utils.book_append_sheet(wb, ws, "Colleras Inscritas");
             
-            let nombreArchivo = "Inscripciones_Santiago_Cumbre";
+            let nombreArchivo = "Colleras_Santiago_Cumbre";
             if(filtroRodeo !== "TODOS") nombreArchivo += "_" + filtroRodeo;
             if(filtroSerie !== "TODOS") nombreArchivo += "_" + filtroSerie;
             nombreArchivo += ".xlsx";
@@ -374,8 +338,8 @@
         setInterval(() => {
             document.querySelectorAll('.timer').forEach(el => {
                 const dif = Date.now() - parseInt(el.getAttribute('data-inicio'));
-                let s = Math.floor(dif / 1000), h = Math.floor(s / 3600); s %= 3600; let m = Math.floor(s / 60); s %= 60;
-                el.innerText = `Abierto hace: ${h}h ${m}m ${s}s`;
+                let s = Math.floor(dif / 1000), h = Math.floor(s / 3600); s %= 3600; let m = Math.floor(s / 60);
+                el.innerText = `Abierto hace: ${h}h ${m}m ${s % 60}s`;
             });
 
             document.querySelectorAll('.timer-countdown').forEach(el => {
@@ -384,8 +348,8 @@
                     el.innerText = "Cerrando..."; el.classList.remove('timer-countdown'); 
                     cerrarItemAutomatico(el.getAttribute('data-id')); 
                 } else {
-                    let s = Math.floor(dif / 1000), h = Math.floor(s / 3600); s %= 3600; let m = Math.floor(s / 60); s %= 60;
-                    el.innerText = `⏳ Faltan: ${h}h ${m}m ${s}s`;
+                    let s = Math.floor(dif / 1000), h = Math.floor(s / 3600); s %= 3600; let m = Math.floor(s / 60);
+                    el.innerText = `⏳ Faltan: ${h}h ${m}m ${s % 60}s`;
                 }
             });
         }, 1000);
