@@ -29,12 +29,30 @@
         
         .botones-dinamicos { display: flex; gap: 10px; }
         .alerta-pago { background-color: #e8f8f5; border: 1px solid #a3e4d7; padding: 15px; border-radius: 6px; margin-top: 20px; }
+        
+        /* Caja de consulta de estado */
+        .seccion-consulta { background: #eaf2f8; border: 1px solid #a4b0be; padding: 15px; border-radius: 6px; margin-bottom: 25px; }
+        .resultado-estado { margin-top: 15px; padding: 15px; border-radius: 6px; display: none; font-weight: bold; text-align: center; }
+        .estado-pendiente { background: #fcf3cf; color: #7d6608; border: 1px solid #f9e79f; }
+        .estado-aprobada { background: #d4efdf; color: #145a32; border: 1px solid #a9dfbf; }
+        .estado-rechazada { background: #fadbd8; color: #78281f; border: 1px solid #f5b7b1; }
     </style>
 </head>
 <body>
     <div class="container">
         <h1>Sistema de Inscripciones</h1>
         <div class="subtitulo-org">Asociación de Rodeo Santiago Cumbre</div>
+
+        <!-- SECCIÓN DE CONSULTAR ESTADO -->
+        <div class="section seccion-consulta">
+            <h3>🔍 Consultar Estado de Inscripción</h3>
+            <p style="font-size: 14px; color: #555;">Si ya te inscribiste, ingresa el RUT del Primer Jinete para verificar si tu pago fue aprobado:</p>
+            <div style="display: flex; gap: 10px;">
+                <input type="text" id="rutConsulta" placeholder="Ej: 12.345.678-9" style="margin-bottom:0;">
+                <button type="button" onclick="consultarEstado()" style="margin-top:0; width: 180px; background-color: #2980b9;">Consultar</button>
+            </div>
+            <div id="resultadoEstado" class="resultado-estado"></div>
+        </div>
 
         <div class="section" id="formulario">
             <h2>Formulario de Inscripción</h2>
@@ -63,9 +81,7 @@
 
                     <hr style="margin: 20px 0; border: 1px solid #eee;">
                     
-                    <div id="contenedorJinetes">
-                        <!-- El Jinete 1 se carga por defecto -->
-                    </div>
+                    <div id="contenedorJinetes"></div>
 
                     <div class="botones-dinamicos">
                         <button type="button" id="btnAgregarJinete" class="btn-add">+ Agregar Jinete (Máx 10)</button>
@@ -88,7 +104,7 @@
 
     <script type="module">
         import { initializeApp } from "https://www.gstatic.com/firebasejs/10.12.2/firebase-app.js";
-        import { getFirestore, collection, addDoc, onSnapshot, query, where } from "https://www.gstatic.com/firebasejs/10.12.2/firebase-firestore.js";
+        import { getFirestore, collection, addDoc, onSnapshot, query, where, getDocs } from "https://www.gstatic.com/firebasejs/10.12.2/firebase-firestore.js";
         import { getStorage, ref, uploadBytes, getDownloadURL } from "https://www.gstatic.com/firebasejs/10.12.2/firebase-storage.js";
 
         const firebaseConfig = {
@@ -152,6 +168,55 @@
         document.getElementById('btnAgregarJinete').addEventListener('click', agregarJinete);
         document.getElementById('btnQuitarJinete').addEventListener('click', quitarJinete);
         agregarJinete();
+
+        // Función para consultar estado público por RUT
+        window.consultarEstado = async function() {
+            const rutBuscado = document.getElementById('rutConsulta').value.trim();
+            const cajaResultado = document.getElementById('resultadoEstado');
+            
+            if(!rutBuscado) {
+                alert("Por favor ingresa un RUT.");
+                return;
+            }
+
+            cajaResultado.style.display = "block";
+            cajaResultado.className = "resultado-estado estado-pendiente";
+            cajaResultado.innerText = "Buscando inscripción...";
+
+            try {
+                // Buscamos coincidencias donde el rut1 coincida
+                const q = query(collection(db, "inscripciones"), where("rut1", "==", rutBuscado));
+                const snapshot = await getDocs(q);
+
+                if(snapshot.empty) {
+                    cajaResultado.className = "resultado-estado estado-rechazada";
+                    cajaResultado.innerText = "❌ No se encontró ninguna inscripción activa con el RUT ingresado (Asegúrate de ingresar el RUT del Primer Jinete tal como se registró).";
+                } else {
+                    let mensajeFinal = "";
+                    snapshot.forEach(docSnap => {
+                        const datos = docSnap.data();
+                        if(datos.estado === "eliminado") return;
+
+                        let estadoTexto = datos.estadoPago || "pendiente";
+                        if(estadoTexto === "pendiente") {
+                            cajaResultado.className = "resultado-estado estado-pendiente";
+                            mensajeInfo = `⏳ Tu inscripción para el rodeo "${datos.rodeo}" (${datos.serie}) está PENDIENTE DE REVISIÓN de pago por la administración.`;
+                        } else if(estadoTexto === "aprobado") {
+                            cajaResultado.className = "resultado-estado estado-aprobada";
+                            mensajeInfo = `✅ ¡FELICIDADES! Tu pago para el rodeo "${datos.rodeo}" (${datos.serie}) fue APROBADO. ¡Inscripción confirmada!`;
+                        } else if(estadoTexto === "rechazado") {
+                            cajaResultado.className = "resultado-estado estado-rechazada";
+                            mensajeInfo = `❌ Tu pago para el rodeo "${datos.rodeo}" (${datos.serie}) fue RECHAZADO. Comunícate con la administración.`;
+                        }
+                        mensajeFinal += mensajeInfo + "<br><br>";
+                    });
+                    cajaResultado.innerHTML = mensajeFinal || "No se encontraron inscripciones vigentes.";
+                }
+            } catch (err) {
+                cajaResultado.className = "resultado-estado estado-rechazada";
+                cajaResultado.innerText = "Error al consultar: " + err.message;
+            }
+        }
 
         onSnapshot(query(collection(db, "rodeos"), where("estado", "==", "abierto")), (snapshot) => {
             selectRodeo.innerHTML = '<option value="">Seleccione el Rodeo...</option>';
@@ -225,6 +290,7 @@
                     serie: document.getElementById('serie').value,
                     cantidadJinetes: totalJinetes,
                     comprobanteUrl: urlDescargaComprobante,
+                    estadoPago: "pendiente", // Estado inicial
                     fecha: Date.now(),
                     estado: "activo"
                 };
@@ -239,7 +305,7 @@
                 }
 
                 await addDoc(collection(db, "inscripciones"), datosAguardar);
-                alert("¡Inscripción de equipo guardada exitosamente!");
+                alert("¡Inscripción de equipo guardada exitosamente! Ya puedes consultar tu estado con el RUT del primer jinete.");
                 location.reload(); 
             } catch (error) {
                 alert("Error al guardar: " + error.message);
