@@ -27,7 +27,6 @@
         .btn-cerrar { background-color: #e74c3c; color: white; border: none; padding: 5px 10px; cursor: pointer; border-radius: 4px; margin-top: 5px; width: 100%;}
         .btn-excel { background-color: #27ae60; color: white; border: none; font-weight: bold; cursor: pointer; margin-bottom: 15px;}
         
-        /* Botones de acción de pago en admin */
         .btn-pago { background-color: #f1c40f; color: #2c3e50; font-weight: bold; padding: 5px 10px; border-radius: 4px; text-decoration: none; display: inline-block; width: 100%; box-sizing: border-box; text-align: center; margin-bottom: 5px; border: none; font-size: 13px;}
         .btn-pago:hover { background-color: #f39c12; }
         .btn-aprobar { background-color: #27ae60; color: white; font-weight: bold; padding: 5px 10px; border-radius: 4px; border: none; cursor: pointer; width: 100%; margin-bottom: 5px; font-size: 13px; }
@@ -108,7 +107,7 @@
                 </div>
             </div>
 
-            <button class="btn-excel" onclick="exportarExcel()">📥 Descargar a Excel</button>
+            <button class="btn-excel" onclick="exportarExcel()">📥 Descargar a Excel Organizado</button>
             
             <div style="overflow-x: auto;">
                 <table id="tablaInscripciones">
@@ -245,7 +244,6 @@
                     }
                 }
 
-                // Estatus visual del pago
                 let estadoPago = ins.estadoPago || "pendiente";
                 let badgeEstado = "";
                 if(estadoPago === "aprobado") badgeEstado = `<span class="badge-aprobado">✅ APROBADO</span>`;
@@ -269,7 +267,6 @@
             });
         }
 
-        // Función para cambiar estado de pago desde el admin
         window.cambiarEstadoPago = async function(id, nuevoEstado) {
             try {
                 await updateDoc(doc(db, "inscripciones", id), { estadoPago: nuevoEstado });
@@ -312,6 +309,7 @@
             if(confirm("¿Borrar a este equipo de la pantalla?")) await updateDoc(doc(db, "inscripciones", id), { estado: "eliminado" });
         };
 
+        // EXCEL OPTIMIZADO: Estructura limpia de filas por jinete
         window.exportarExcel = function() {
             const filtroRodeo = document.getElementById('filtroRodeoTabla').value;
             const filtroSerie = document.getElementById('filtroSerieTabla').value;
@@ -325,54 +323,51 @@
 
             if(datosAExportar.length === 0) return alert("No hay datos para exportar con este filtro.");
             
-            let maxJinetesExportacion = 1;
+            let filasExcelLimpias = [];
+
             datosAExportar.forEach(ins => {
-                let cantidad = ins.cantidadJinetes || (ins.jinete2 ? 2 : 1);
-                if(cantidad > maxJinetesExportacion) maxJinetesExportacion = cantidad;
-            });
-
-            const datosLimpios = datosAExportar.map(ins => {
-                let filaExcel = {
-                    "Asociación": ins.asociacion || "Asociación de Rodeo Santiago Cumbre",
-                    "Rodeo": ins.rodeo,
-                    "Serie": ins.serie,
-                    "Estado Pago": (ins.estadoPago || "pendiente").toUpperCase(),
-                    "Link Comprobante de Pago": ins.comprobanteUrl || 'No adjunto'
-                };
+                let maxJinetes = ins.cantidadJinetes || (ins.jinete2 ? 2 : 1);
                 
-                for(let i = 1; i <= maxJinetesExportacion; i++) {
-                    filaExcel[`Jinete ${i} - Nombre`] = ins[`jinete${i}`] || '-';
-                    filaExcel[`Jinete ${i} - RUT`] = ins[`rut${i}`] || '-';
-                    filaExcel[`Jinete ${i} - Caballo`] = ins[`caballo${i}`] || '-';
-                    filaExcel[`Jinete ${i} - Criadero`] = ins[`criadero${i}`] || '-';
-                    filaExcel[`Jinete ${i} - Club`] = ins[`club${i}`] || '-';
-                    filaExcel[`Jinete ${i} - Teléfono`] = ins[`telefono${i}`] || '-';
+                for(let i = 1; i <= maxJinetes; i++) {
+                    if(ins[`jinete${i}`]) {
+                        filasExcelLimpias.push({
+                            "Asociación": ins.asociacion || "Asociación de Rodeo Santiago Cumbre",
+                            "Rodeo": ins.rodeo,
+                            "Serie": ins.serie,
+                            "Estado Pago": (ins.estadoPago || "pendiente").toUpperCase(),
+                            "N° Jinete": `${i}° Jinete`,
+                            "Nombre Jinete": ins[`jinete${i}`] || '-',
+                            "RUT Jinete": ins[`rut${i}`] || '-',
+                            "Caballo": ins[`caballo${i}`] || '-',
+                            "Criadero": ins[`criadero${i}`] || '-',
+                            "Club / Asociación": ins[`club${i}`] || ins.club || '-',
+                            "Teléfono": ins[`telefono${i}`] || ins.telefono || '-',
+                            "Comprobante de Pago": ins.comprobanteUrl || 'No adjunto'
+                        });
+                    }
                 }
-                return filaExcel;
             });
 
-            const ws = XLSX.utils.json_to_sheet(datosLimpios);
+            const ws = XLSX.utils.json_to_sheet(filasExcelLimpias);
 
-            let anchosColumnas = [
-                {wch: 35}, // Asociación
+            // Ajustar anchos de columnas para una lectura cómoda y profesional
+            ws['!cols'] = [
+                {wch: 32}, // Asociación
                 {wch: 22}, // Rodeo
-                {wch: 20}, // Serie
+                {wch: 18}, // Serie
                 {wch: 15}, // Estado Pago
-                {wch: 40}  // Link Pago
+                {wch: 12}, // N° Jinete
+                {wch: 28}, // Nombre Jinete
+                {wch: 15}, // RUT
+                {wch: 22}, // Caballo
+                {wch: 20}, // Criadero
+                {wch: 25}, // Club
+                {wch: 15}, // Teléfono
+                {wch: 40}  // Link Comprobante
             ];
-            
-            for(let i = 1; i <= maxJinetesExportacion; i++) {
-                anchosColumnas.push({wch: 25}); // Nombre
-                anchosColumnas.push({wch: 15}); // RUT
-                anchosColumnas.push({wch: 20}); // Caballo
-                anchosColumnas.push({wch: 20}); // Criadero
-                anchosColumnas.push({wch: 25}); // Club
-                anchosColumnas.push({wch: 15}); // Teléfono
-            }
-            ws['!cols'] = anchosColumnas;
 
             const wb = XLSX.utils.book_new();
-            XLSX.utils.book_append_sheet(wb, ws, "Inscripciones");
+            XLSX.utils.book_append_sheet(wb, ws, "Inscripciones Ordenadas");
             
             let nombreArchivo = "Inscripciones_Santiago_Cumbre";
             if(filtroRodeo !== "TODOS") nombreArchivo += "_" + filtroRodeo;
