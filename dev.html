@@ -1,0 +1,393 @@
+<!DOCTYPE html>
+<html lang="es">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Perfil Desarrollador - Asociación de Rodeo Santiago Cumbre</title>
+    <script src="https://cdnjs.cloudflare.com/ajax/libs/xlsx/0.18.5/xlsx.full.min.js"></script>
+    <style>
+        body { font-family: 'Segoe UI', Tahoma, Geneva, Verdana, sans-serif; background-color: #1e272e; padding: 20px; color: #333; margin: 0; }
+        .login-screen { background: white; max-width: 400px; margin: 100px auto; padding: 30px; border-radius: 8px; text-align: center; box-shadow: 0 4px 15px rgba(0,0,0,0.3); }
+        .login-screen input { width: 100%; padding: 10px; margin: 15px 0; border: 1px solid #ccc; border-radius: 4px; box-sizing: border-box; }
+        .login-screen button { background: #3498db; color: white; border: none; padding: 10px; width: 100%; border-radius: 4px; cursor: pointer; font-size: 16px; font-weight: bold;}
+        
+        .admin-dashboard { display: none; max-width: 1200px; margin: auto; }
+        h1, h2 { color: white; text-align: center; margin-bottom: 5px; }
+        .subtitulo-admin { text-align: center; color: #00d2d3; font-weight: bold; margin-bottom: 25px; text-transform: uppercase; letter-spacing: 1px; font-size: 0.9em; }
+        
+        .card { background: white; padding: 20px; border-radius: 8px; margin-bottom: 20px; box-shadow: 0 2px 5px rgba(0,0,0,0.1); }
+        .card h3 { margin-top: 0; color: #2c3e50; border-bottom: 2px solid #ecf0f1; padding-bottom: 10px; }
+        
+        .flex-grid { display: flex; gap: 20px; flex-wrap: wrap; }
+        .col { flex: 1; min-width: 300px; }
+        
+        input, select, button { padding: 10px; margin-bottom: 10px; border-radius: 4px; border: 1px solid #ccc; width: 100%; box-sizing: border-box; }
+        .btn-crear { background-color: #3498db; color: white; font-weight: bold; border: none; cursor: pointer; }
+        .btn-crear:hover { background-color: #2980b9; }
+        .btn-cerrar { background-color: #e67e22; color: white; border: none; padding: 5px 8px; cursor: pointer; border-radius: 4px; font-size: 12px; }
+        .btn-eliminar { background-color: #c0392b; color: white; border: none; padding: 5px 8px; cursor: pointer; border-radius: 4px; font-size: 12px; }
+        
+        .btn-excel { background-color: #27ae60; color: white; border: none; font-weight: bold; cursor: pointer; margin-bottom: 15px;}
+        .btn-pago { background-color: #f1c40f; color: #2c3e50; font-weight: bold; padding: 5px 10px; border-radius: 4px; text-decoration: none; display: inline-block; width: 100%; box-sizing: border-box; text-align: center; margin-bottom: 5px; border: none; font-size: 13px;}
+        .btn-aprobar { background-color: #27ae60; color: white; font-weight: bold; padding: 5px 10px; border-radius: 4px; border: none; cursor: pointer; width: 100%; margin-bottom: 5px; font-size: 13px; }
+        .btn-rechazar { background-color: #e74c3c; color: white; font-weight: bold; padding: 5px 10px; border-radius: 4px; border: none; cursor: pointer; width: 100%; margin-bottom: 5px; font-size: 13px; }
+
+        .badge-pendiente { background: #fcf3cf; color: #b7950b; padding: 3px 8px; border-radius: 4px; font-size: 11px; font-weight: bold; display: inline-block; margin-bottom: 5px;}
+        .badge-aprobado { background: #d4efdf; color: #1e8449; padding: 3px 8px; border-radius: 4px; font-size: 11px; font-weight: bold; display: inline-block; margin-bottom: 5px;}
+        .badge-rechazado { background: #fadbd8; color: #922b21; padding: 3px 8px; border-radius: 4px; font-size: 11px; font-weight: bold; display: inline-block; margin-bottom: 5px;}
+
+        .item-lista { display: flex; justify-content: space-between; align-items: center; background: #f8f9fa; padding: 10px; border: 1px solid #ddd; border-radius: 4px; margin-bottom: 10px; }
+        .botones-item { display: flex; gap: 5px; }
+        
+        .timer { font-family: monospace; font-weight: bold; color: #27ae60; font-size: 1em; background: #e8f8f5; padding: 2px 6px; border-radius: 4px;}
+        .timer-countdown { font-family: monospace; font-weight: bold; color: #d35400; font-size: 1em; background: #ffeaa7; padding: 2px 6px; border-radius: 4px;}
+        .etiqueta-rodeo { font-size: 12px; color: #7f8c8d; font-weight: bold; }
+        
+        .filtros-container { display: flex; gap: 10px; background: #ecf0f1; padding: 15px; border-radius: 6px; margin-bottom: 15px; border: 1px solid #bdc3c7;}
+        .filtros-container select { margin-bottom: 0; }
+        
+        table { width: 100%; border-collapse: collapse; margin-top: 15px; font-size: 14px; }
+        th, td { border: 1px solid #ddd; padding: 10px; text-align: left; vertical-align: top;}
+        th { background-color: #f4f4f4; color: #333;}
+        .meta-info { font-size: 12px; color: #7f8c8d; display: block;}
+        .acciones-col { width: 130px; }
+
+        .dev-badge { background: #00d2d3; color: #1e272e; padding: 4px 10px; border-radius: 4px; font-weight: bold; font-size: 12px; display: inline-block; margin-bottom: 10px; }
+    </style>
+</head>
+<body>
+
+    <div class="login-screen" id="loginScreen">
+        <h2>🛠️ Acceso Desarrollador</h2>
+        <p>Área Privada de Mantenimiento</p>
+        <input type="password" id="passInput" placeholder="Clave de Desarrollador">
+        <button onclick="verificarPassword()">Ingresar al Sistema</button>
+    </div>
+
+    <div class="admin-dashboard" id="adminDashboard">
+        <h1>🛠️ Consola de Desarrollador</h1>
+        <div class="subtitulo-admin">Asociación de Rodeo Santiago Cumbre • Control Total del Sistema</div>
+
+        <div class="card" style="background: #2f3640; color: white;">
+            <h3>📊 Diagnóstico del Sistema en Tiempo Real</h3>
+            <div style="display: flex; gap: 20px; text-align: center; margin-top: 15px;">
+                <div style="flex: 1; background: #353b48; padding: 15px; border-radius: 6px;">
+                    <span style="font-size: 22px; font-weight: bold; color: #00d2d3;" id="statColleras">0</span><br><span style="font-size: 12px; color: #dcdde1;">Colleras Registradas</span>
+                </div>
+                <div style="flex: 1; background: #353b48; padding: 15px; border-radius: 6px;">
+                    <span style="font-size: 22px; font-weight: bold; color: #4cd137;" id="statRodeos">0</span><br><span style="font-size: 12px; color: #dcdde1;">Rodeos Activos</span>
+                </div>
+                <div style="flex: 1; background: #353b48; padding: 15px; border-radius: 6px;">
+                    <span style="font-size: 22px; font-weight: bold; color: #fbc531;" id="statSeries">0</span><br><span style="font-size: 12px; color: #dcdde1;">Series Activas</span>
+                </div>
+            </div>
+        </div>
+
+        <div class="flex-grid">
+            <div class="col card">
+                <h3>🤠 Gestión de Rodeos</h3>
+                <input type="text" id="nuevoRodeo" placeholder="Nombre del nuevo rodeo">
+                <button class="btn-crear" onclick="crearRodeo()">+ Abrir Nuevo Rodeo</button>
+                <h4>Rodeos Registrados:</h4>
+                <div id="listaRodeos"></div>
+            </div>
+
+            <div class="col card">
+                <h3>🐎 Gestión de Series</h3>
+                <select id="rodeoParaSerie"><option value="">Cargando...</option></select>
+                <input type="text" id="nuevaSerie" placeholder="Nombre de la serie">
+                <input type="number" id="tiempoSerie" placeholder="Minutos de duración (Cronómetro)" min="1">
+                <button class="btn-crear" onclick="crearSerie()">+ Abrir Serie con Temporizador</button>
+                <h4>Series Registradas:</h4>
+                <div id="listaSeries"></div>
+            </div>
+        </div>
+
+        <div class="card">
+            <h3>📋 Base de Datos de Colleras Inscritas</h3>
+            
+            <div class="filtros-container">
+                <div style="flex: 1;">
+                    <label style="font-size: 12px; font-weight: bold; color: #7f8c8d;">Filtrar por Rodeo:</label>
+                    <select id="filtroRodeoTabla" onchange="renderizarTabla()">
+                        <option value="TODOS">Todos los Rodeos</option>
+                    </select>
+                </div>
+                <div style="flex: 1;">
+                    <label style="font-size: 12px; font-weight: bold; color: #7f8c8d;">Filtrar por Serie:</label>
+                    <select id="filtroSerieTabla" onchange="renderizarTabla()">
+                        <option value="TODOS">Todas las Series</option>
+                    </select>
+                </div>
+            </div>
+
+            <button class="btn-excel" onclick="exportarExcel()">📥 Descargar Excel Optimizado de Colleras</button>
+            
+            <div style="overflow-x: auto;">
+                <table id="tablaInscripciones">
+                    <thead>
+                        <tr>
+                            <th>Serie / Rodeo</th>
+                            <th>Datos de la Collera</th>
+                            <th class="acciones-col">Acción / Pago</th>
+                        </tr>
+                    </thead>
+                    <tbody></tbody>
+                </table>
+            </div>
+        </div>
+    </div>
+
+    <script type="module">
+        import { initializeApp } from "https://www.gstatic.com/firebasejs/10.12.2/firebase-app.js";
+        import { getFirestore, collection, addDoc, onSnapshot, query, updateDoc, deleteDoc, doc } from "https://www.gstatic.com/firebasejs/10.12.2/firebase-firestore.js";
+
+        const firebaseConfig = {
+          apiKey: "AIzaSyCqtSOu4YemJGUb9dRG_7IDZZBL4E3yNsM",
+          authDomain: "inscripciones-rodeos-909bb.firebaseapp.com",
+          projectId: "inscripciones-rodeos-909bb",
+          storageBucket: "inscripciones-rodeos-909bb.firebasestorage.app",
+          messagingSenderId: "541411909779",
+          appId: "1:541411909779:web:4cae02b122a4ac8928ad66"
+        };
+
+        const app = initializeApp(firebaseConfig);
+        const db = getFirestore(app);
+        
+        let inscripcionesGlobales = [];
+        window.seriesCerrando = {}; 
+
+        // CLAVE SECRETA DEL DESARROLLADOR (Puedes cambiar "dev2026" por la que prefieras)
+        const CLAVE_DEV = "dev2026";
+
+        window.verificarPassword = function() {
+            if(document.getElementById('passInput').value === CLAVE_DEV) {
+                document.getElementById('loginScreen').style.display = "none";
+                document.getElementById('adminDashboard').style.display = "block";
+                iniciarBaseDeDatos();
+            } else { alert("Clave de desarrollador incorrecta"); }
+        };
+
+        function iniciarBaseDeDatos() {
+            onSnapshot(collection(db, "rodeos"), (snapshot) => {
+                const contenedorRodeos = document.getElementById('listaRodeos');
+                const selectorRodeoParaSerie = document.getElementById('rodeoParaSerie');
+                const filtroRodeoTabla = document.getElementById('filtroRodeoTabla');
+                
+                contenedorRodeos.innerHTML = '';
+                selectorRodeoParaSerie.innerHTML = '<option value="">1. Seleccione a qué Rodeo pertenece la serie...</option>';
+                const seleccionRodeoActual = filtroRodeoTabla.value;
+                filtroRodeoTabla.innerHTML = '<option value="TODOS">Todos los Rodeos</option>';
+
+                let countRodeosAbiertos = 0;
+                snapshot.forEach(d => {
+                    const data = d.data();
+                    filtroRodeoTabla.innerHTML += `<option value="${data.nombre}">${data.nombre}</option>`;
+                    
+                    if(data.estado === "abierto") countRodeosAbiertos++;
+                    let estadoTexto = data.estado === "abierto" ? `<span class="timer">Abierto</span>` : `<span style="color:#e74c3c; font-size:12px; font-weight:bold;">Cerrado</span>`;
+                    
+                    contenedorRodeos.innerHTML += `
+                        <div class="item-lista">
+                            <div><strong>${data.nombre}</strong><br>${estadoTexto}</div>
+                            <div class="botones-item">
+                                <button class="btn-cerrar" onclick="cambiarEstadoItem('rodeos', '${d.id}', '${data.estado === "abierto" ? "cerrado" : "abierto"}')">${data.estado === "abierto" ? "Cerrar" : "Abrir"}</button>
+                                <button class="btn-eliminar" onclick="borrarPermanente('rodeos', '${d.id}', '¿Borrar este Rodeo?')">🗑️ Borrar</button>
+                            </div>
+                        </div>`;
+                    if(data.estado === "abierto") {
+                        selectorRodeoParaSerie.innerHTML += `<option value="${data.nombre}">${data.nombre}</option>`;
+                    }
+                });
+                document.getElementById('statRodeos').innerText = countRodeosAbiertos;
+                filtroRodeoTabla.value = seleccionRodeoActual || "TODOS";
+            });
+
+            onSnapshot(collection(db, "series"), (snapshot) => {
+                const contenedor = document.getElementById('listaSeries');
+                const filtroSerieTabla = document.getElementById('filtroSerieTabla');
+                contenedor.innerHTML = '';
+                const seleccionSerieActual = filtroSerieTabla.value;
+                filtroSerieTabla.innerHTML = '<option value="TODOS">Todas las Series</option>';
+
+                let countSeriesAbiertas = 0;
+                snapshot.forEach(d => {
+                    const data = d.data();
+                    filtroSerieTabla.innerHTML += `<option value="${data.nombre}">${data.nombre} (${data.rodeoNombre})</option>`;
+                    
+                    let infoEstadoSerie = "";
+                    if(data.estado === "abierto") {
+                        countSeriesAbiertas++;
+                        infoEstadoSerie = `<span class="timer-countdown" data-cierre="${data.fechaCierre}" data-id="${d.id}">Calculando...</span>`;
+                    } else {
+                        infoEstadoSerie = `<span style="color:#e74c3c; font-size:12px; font-weight:bold;">Cerrada Manualmente</span>`;
+                    }
+
+                    contenedor.innerHTML += `
+                        <div class="item-lista">
+                            <div>
+                                <strong>${data.nombre}</strong> <br>
+                                <span class="etiqueta-rodeo">${data.rodeoNombre}</span> | ${infoEstadoSerie}
+                            </div>
+                            <div class="botones-item">
+                                <button class="btn-cerrar" onclick="cambiarEstadoItem('series', '${d.id}', '${data.estado === "abierto" ? "cerrado" : "abierto"}')">${data.estado === "abierto" ? "Cerrar" : "Abrir"}</button>
+                                <button class="btn-eliminar" onclick="borrarPermanente('series', '${d.id}', '¿Borrar esta Serie?')">🗑️ Borrar</button>
+                            </div>
+                        </div>`;
+                });
+                document.getElementById('statSeries').innerText = countSeriesAbiertas;
+                filtroSerieTabla.value = seleccionSerieActual || "TODOS";
+            });
+
+            onSnapshot(collection(db, "inscripciones"), (snapshot) => {
+                inscripcionesGlobales = [];
+                let countColleras = 0;
+                snapshot.forEach(d => {
+                    const ins = d.data();
+                    ins.id = d.id;
+                    inscripcionesGlobales.push(ins);
+                    countColleras++;
+                });
+                document.getElementById('statColleras').innerText = countColleras;
+                renderizarTabla();
+            });
+        }
+
+        window.renderizarTabla = function() {
+            const tbody = document.querySelector('#tablaInscripciones tbody');
+            tbody.innerHTML = '';
+            const filtroRodeo = document.getElementById('filtroRodeoTabla').value;
+            const filtroSerie = document.getElementById('filtroSerieTabla').value;
+
+            inscripcionesGlobales.forEach(ins => {
+                if (filtroRodeo !== "TODOS" && ins.rodeo !== filtroRodeo) return;
+                if (filtroSerie !== "TODOS" && ins.serie !== filtroSerie) return;
+
+                let colleraHTML = `
+                    <div style="margin-bottom: 6px;"><strong>1° Jinete:</strong> ${ins.jinete1} [RUT: ${ins.rut1}]<br>
+                    <span class="meta-info">🐴 Caballo: ${ins.caballo1} (${ins.criadero1}) | Club: ${ins.club1} | 📞 ${ins.telefono1}</span></div>
+                    <div><strong>2° Jinete:</strong> ${ins.jinete2} [RUT: ${ins.rut2}]<br>
+                    <span class="meta-info">🐴 Caballo: ${ins.caballo2} (${ins.criadero2}) | Club: ${ins.club2} | 📞 ${ins.telefono2}</span></div>
+                `;
+
+                let estadoPago = ins.estadoPago || "pendiente";
+                let badgeEstado = estadoPago === "aprobado" ? `<span class="badge-aprobado">✅ APROBADO</span>` :
+                                  estadoPago === "rechazado" ? `<span class="badge-rechazado">❌ RECHAZADO</span>` :
+                                  `<span class="badge-pendiente">⏳ PENDIENTE</span>`;
+
+                let botonPagoHTML = ins.comprobanteUrl ? `<a href="${ins.comprobanteUrl}" target="_blank" class="btn-pago">👁️ Ver Pago</a>` : '';
+
+                tbody.innerHTML += `
+                    <tr>
+                        <td><strong>${ins.serie}</strong><br><span class="meta-info">${ins.rodeo}</span></td>
+                        <td>${colleraHTML}</td>
+                        <td class="acciones-col">
+                            ${badgeEstado}
+                            ${botonPagoHTML}
+                            <button class="btn-aprobar" onclick="cambiarEstadoPago('${ins.id}', 'aprobado')">Aprobar</button>
+                            <button class="btn-rechazar" onclick="cambiarEstadoPago('${ins.id}', 'rechazado')">Rechazar</button>
+                            <button class="btn-eliminar" style="width:100%; margin-top:5px;" onclick="borrarPermanente('inscripciones', '${ins.id}', '¿Eliminar esta collera inscrita?')">🗑️ Borrar</button>
+                        </td>
+                    </tr>`;
+            });
+        }
+
+        window.cambiarEstadoPago = async function(id, nuevoEstado) {
+            try {
+                await updateDoc(doc(db, "inscripciones", id), { estadoPago: nuevoEstado });
+                alert(`Actualizado a: ${nuevoEstado.toUpperCase()}`);
+            } catch (err) { alert("Error: " + err.message); }
+        };
+
+        window.cambiarEstadoItem = async function(coleccion, id, nuevoEstado) {
+            try {
+                await updateDoc(doc(db, coleccion, id), { estado: nuevoEstado });
+            } catch (err) { alert("Error: " + err.message); }
+        };
+
+        window.borrarPermanente = async function(coleccion, id, mensaje) {
+            if(confirm(mensaje)) {
+                try {
+                    await deleteDoc(doc(db, coleccion, id));
+                    alert("Eliminado correctamente.");
+                } catch (err) { alert("Error al borrar: " + err.message); }
+            }
+        };
+
+        window.crearRodeo = async function() {
+            const nombre = document.getElementById('nuevoRodeo').value;
+            if(!nombre) return alert("Escribe un nombre");
+            await addDoc(collection(db, "rodeos"), { nombre: nombre, estado: "abierto", fechaApertura: Date.now() });
+            document.getElementById('nuevoRodeo').value = '';
+        };
+
+        window.crearSerie = async function() {
+            const rodeo = document.getElementById('rodeoParaSerie').value;
+            const serie = document.getElementById('nuevaSerie').value;
+            const minutos = parseInt(document.getElementById('tiempoSerie').value);
+            if(!rodeo || !serie || !minutos) return alert("Completa todos los campos");
+            
+            await addDoc(collection(db, "series"), { 
+                nombre: serie, rodeoNombre: rodeo, estado: "abierto", 
+                fechaApertura: Date.now(), fechaCierre: Date.now() + (minutos * 60 * 1000)
+            });
+            document.getElementById('nuevaSerie').value = ''; document.getElementById('tiempoSerie').value = '';
+        };
+
+        window.exportarExcel = function() {
+            const filtroRodeo = document.getElementById('filtroRodeoTabla').value;
+            const filtroSerie = document.getElementById('filtroSerieTabla').value;
+            
+            const datosAExportar = inscripcionesGlobales.filter(ins => {
+                if (filtroRodeo !== "TODOS" && ins.rodeo !== filtroRodeo) return false;
+                if (filtroSerie !== "TODOS" && ins.serie !== filtroSerie) return false;
+                return true;
+            });
+
+            if(datosAExportar.length === 0) return alert("No hay datos para exportar.");
+            
+            let filasExcel = datosAExportar.map(ins => {
+                return {
+                    "Rodeo": ins.rodeo,
+                    "Serie": ins.serie,
+                    "Primer Jinete": `${ins.jinete1} (RUT: ${ins.rut1})`,
+                    "Segundo Jinete": `${ins.jinete2} (RUT: ${ins.rut2})`,
+                    "Caballos y Criaderos": `1. ${ins.caballo1} [Criadero: ${ins.criadero1}] \n2. ${ins.caballo2} [Criadero: ${ins.criadero2}]`,
+                    "Clubes / Asociaciones": `1. ${ins.club1} \n2. ${ins.club2}`,
+                    "Teléfonos": `1. ${ins.telefono1} \n2. ${ins.telefono2}`
+                };
+            });
+
+            const ws = XLSX.utils.json_to_sheet(filasExcel);
+            ws['!cols'] = [{wch: 22}, {wch: 18}, {wch: 30}, {wch: 30}, {wch: 38}, {wch: 30}, {wch: 22}];
+
+            const wb = XLSX.utils.book_new();
+            XLSX.utils.book_append_sheet(wb, ws, "Colleras Inscritas");
+            
+            let nombreArchivo = "Colleras_Santiago_Cumbre_DEV";
+            if(filtroRodeo !== "TODOS") nombreArchivo += "_" + filtroRodeo;
+            if(filtroSerie !== "TODOS") nombreArchivo += "_" + filtroSerie;
+            nombreArchivo += ".xlsx";
+            
+            XLSX.writeFile(wb, nombreArchivo);
+        };
+
+        setInterval(() => {
+            document.querySelectorAll('.timer-countdown').forEach(el => {
+                const cierre = parseInt(el.getAttribute('data-cierre'));
+                const idSerie = el.getAttribute('data-id');
+                const dif = cierre - Date.now();
+                
+                if (dif <= 0) {
+                    el.innerText = "⏳ Expirado"; 
+                    el.style.color = "#c0392b";
+                    updateDoc(doc(db, "series", idSerie), { estado: "cerrado" }).catch(()=>{});
+                } else {
+                    let s = Math.floor(dif / 1000), h = Math.floor(s / 3600); s %= 3600; let m = Math.floor(s / 60);
+                    el.innerText = `⏳ Faltan: ${h}h ${m}m ${s % 60}s`;
+                }
+            });
+        }, 1000);
+    </script>
+</body>
+</html>
