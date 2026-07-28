@@ -4,6 +4,7 @@
     <meta charset="UTF-8">
     <meta name="viewport" content="width=device-width, initial-scale=1.0">
     <title>Administración - Asociación de Rodeo Santiago Cumbre</title>
+    <!-- Librería SheetJS para Excel -->
     <script src="https://cdnjs.cloudflare.com/ajax/libs/xlsx/0.18.5/xlsx.full.min.js"></script>
     <style>
         body { font-family: 'Segoe UI', Tahoma, Geneva, Verdana, sans-serif; background-color: #2c3e50; padding: 20px; color: #333; margin: 0; }
@@ -303,7 +304,6 @@
             document.getElementById('nuevaSerie').value = ''; document.getElementById('tiempoSerie').value = '';
         };
 
-        // Función auxiliar para separar cuerpo y dígito verificador de un RUT chileno
         function separarRut(rutCompleto) {
             if(!rutCompleto) return { cuerpo: "", dv: "" };
             let limpio = rutCompleto.replace(/\./g, '').trim();
@@ -318,7 +318,7 @@
             return { cuerpo: limpio, dv: "" };
         }
 
-        // EXCEL CON LAS 12 COLUMNAS Y SUS NUEVOS TÍTULOS EXACTOS
+        // EXCEL CON DISEÑO PROFESIONAL (Títulos destacados, bordes y autoajuste)
         window.exportarExcel = function() {
             const filtroRodeo = document.getElementById('filtroRodeoTabla').value;
             const filtroSerie = document.getElementById('filtroSerieTabla').value;
@@ -339,13 +339,13 @@
                 return {
                     "Club": ins.club1 || "-",
                     "Nombre Primer Jinete": ins.jinete1 || "-",
-                    "Rut": r1.cuerpo,
-                    "DV": r1.dv,
+                    "Rut(Sin DV)": r1.cuerpo,
+                    "DV Primer Jinete": r1.dv,
                     "Nombre Primer Caballo": ins.caballo1 || "-",
                     "N° Primer Caballo": ins.nroCaballo1 || "-",
                     "Nombre Segundo jinete": ins.jinete2 || "-",
-                    "Rut2": r2.cuerpo,
-                    "DV2": r2.dv,
+                    "Rut(Sin DV)": r2.cuerpo,
+                    "DV Segundo Jinete": r2.dv,
                     "Nombre Segundo Caballo": ins.caballo2 || "-",
                     "N° Segundo Caballo": ins.nroCaballo2 || "-",
                     "Criadero": criaderosUnidos || "-"
@@ -353,11 +353,52 @@
             });
 
             const ws = XLSX.utils.json_to_sheet(filasExcel);
-            ws['!cols'] = [
-                {wch: 20}, {wch: 25}, {wch: 15}, {wch: 15}, 
-                {wch: 20}, {wch: 16}, {wch: 25}, {wch: 15}, 
-                {wch: 15}, {wch: 20}, {wch: 16}, {wch: 25}
-            ];
+
+            // Estilos y bordes para las celdas
+            const range = XLSX.utils.decode_range(ws['!ref']);
+            for (let R = range.s.r; R <= range.e.r; ++R) {
+                for (let C = range.s.c; C <= range.e.c; ++C) {
+                    const cellAddress = XLSX.utils.encode_cell({ r: R, c: C });
+                    if (!ws[cellAddress]) continue;
+
+                    if (!ws[cellAddress].s) ws[cellAddress].s = {};
+
+                    // Definir bordes delgados en todas las celdas con datos
+                    ws[cellAddress].s.border = {
+                        top: { style: "thin", color: { rgb: "D3D3D3" } },
+                        bottom: { style: "thin", color: { rgb: "D3D3D3" } },
+                        left: { style: "thin", color: { rgb: "D3D3D3" } },
+                        right: { style: "thin", color: { rgb: "D3D3D3" } }
+                    };
+
+                    // Destacar títulos de la Fila 0 (Encabezados)
+                    if (R === 0) {
+                        ws[cellAddress].s.fill = { fgColor: { rgb: "1F4E78" } }; // Azul institucional oscuro
+                        ws[cellAddress].s.font = { color: { rgb: "FFFFFF" }, bold: true, name: "Calibri", sz: 11 };
+                        ws[cellAddress].s.alignment = { horizontal: "center", vertical: "center" };
+                    } else {
+                        ws[cellAddress].s.font = { name: "Calibri", sz: 11 };
+                        ws[cellAddress].s.alignment = { vertical: "center" };
+                    }
+                }
+            }
+
+            // Autoajuste dinámico de ancho de columnas según su contenido
+            const colWidths = [];
+            for (let C = range.s.c; C <= range.e.c; ++C) {
+                let maxWidth = 10;
+                for (let R = range.s.r; R <= range.e.r; ++R) {
+                    const cellAddress = XLSX.utils.encode_cell({ r: R, c: C });
+                    if (ws[cellAddress] && ws[cellAddress].v) {
+                        const cellLength = ws[cellAddress].v.toString().length;
+                        if (cellLength > maxWidth) {
+                            maxWidth = cellLength;
+                        }
+                    }
+                }
+                colWidths.push({ wch: maxWidth + 4 }); // Margen de espacio extra
+            }
+            ws['!cols'] = colWidths;
 
             const wb = XLSX.utils.book_new();
             XLSX.utils.book_append_sheet(wb, ws, "Inscripciones Oficiales");
