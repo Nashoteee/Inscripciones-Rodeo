@@ -104,7 +104,7 @@
                 </div>
             </div>
 
-            <button class="btn-excel" onclick="exportarExcel()">📥 Descargar Excel Optimizado de Colleras</button>
+            <button class="btn-excel" onclick="exportarExcel()">📥 Descargar Excel con Formato Oficial</button>
             
             <div style="overflow-x: auto;">
                 <table id="tablaInscripciones">
@@ -236,9 +236,9 @@
 
                 let colleraHTML = `
                     <div style="margin-bottom: 6px;"><strong>1° Jinete:</strong> ${ins.jinete1} [RUT: ${ins.rut1}]<br>
-                    <span class="meta-info">🐴 Caballo: ${ins.caballo1} (${ins.criadero1}) | Club: ${ins.club1} | 📞 ${ins.telefono1}</span></div>
+                    <span class="meta-info">🐴 Caballo: ${ins.caballo1} (N° ${ins.nroCaballo1}) | Club: ${ins.club1} | Criadero: ${ins.criadero1}</span></div>
                     <div><strong>2° Jinete:</strong> ${ins.jinete2} [RUT: ${ins.rut2}]<br>
-                    <span class="meta-info">🐴 Caballo: ${ins.caballo2} (${ins.criadero2}) | Club: ${ins.club2} | 📞 ${ins.telefono2}</span></div>
+                    <span class="meta-info">🐴 Caballo: ${ins.caballo2} (N° ${ins.nroCaballo2}) | Club: ${ins.club2} | Criadero: ${ins.criadero2}</span></div>
                 `;
 
                 let estadoPago = ins.estadoPago || "pendiente";
@@ -257,7 +257,7 @@
                             ${botonPagoHTML}
                             <button class="btn-aprobar" onclick="cambiarEstadoPago('${ins.id}', 'aprobado')">Aprobar</button>
                             <button class="btn-rechazar" onclick="cambiarEstadoPago('${ins.id}', 'rechazado')">Rechazar</button>
-                            <button class="btn-eliminar" style="width:100%; margin-top:5px;" onclick="borrarPermanente('inscripciones', '${ins.id}', '¿Eliminar esta collera inscrita?')">🗑️ Borrar</button>
+                            <button class="btn-eliminar" style="width:100%; margin-top:5px;" onclick="borrarPermanente('inscripciones', '${ins.id}', '¿Eliminar esta collera?')">🗑️ Borrar</button>
                         </td>
                     </tr>`;
             });
@@ -266,7 +266,6 @@
         window.cambiarEstadoPago = async function(id, nuevoEstado) {
             try {
                 await updateDoc(doc(db, "inscripciones", id), { estadoPago: nuevoEstado });
-                alert(`Actualizado a: ${nuevoEstado.toUpperCase()}`);
             } catch (err) { alert("Error: " + err.message); }
         };
 
@@ -280,7 +279,6 @@
             if(confirm(mensaje)) {
                 try {
                     await deleteDoc(doc(db, coleccion, id));
-                    alert("Eliminado correctamente.");
                 } catch (err) { alert("Error al borrar: " + err.message); }
             }
         };
@@ -296,7 +294,7 @@
             const rodeo = document.getElementById('rodeoParaSerie').value;
             const serie = document.getElementById('nuevaSerie').value;
             const minutos = parseInt(document.getElementById('tiempoSerie').value);
-            if(!rodeo || !serie || !minutos) return alert("Completa todos los campos (incluyendo los minutos del cronómetro)");
+            if(!rodeo || !serie || !minutos) return alert("Completa todos los campos");
             
             await addDoc(collection(db, "series"), { 
                 nombre: serie, rodeoNombre: rodeo, estado: "abierto", 
@@ -305,6 +303,22 @@
             document.getElementById('nuevaSerie').value = ''; document.getElementById('tiempoSerie').value = '';
         };
 
+        // Función auxiliar para separar cuerpo y dígito verificador de un RUT chileno
+        function separarRut(rutCompleto) {
+            if(!rutCompleto) return { cuerpo: "", dv: "" };
+            let limpio = rutCompleto.replace(/\./g, '').trim();
+            let partes = limpio.split('-');
+            if(partes.length === 2) {
+                return { cuerpo: partes[0], dv: partes[1].toUpperCase() };
+            } else if(limpio.length > 1) {
+                let cuerpo = limpio.slice(0, -1);
+                let dv = limpio.slice(-1).toUpperCase();
+                return { cuerpo: cuerpo, dv: dv };
+            }
+            return { cuerpo: limpio, dv: "" };
+        }
+
+        // EXCEL CON LAS 12 COLUMNAS ESTRICTAS SOLICITADAS
         window.exportarExcel = function() {
             const filtroRodeo = document.getElementById('filtroRodeoTabla').value;
             const filtroSerie = document.getElementById('filtroSerieTabla').value;
@@ -318,27 +332,37 @@
             if(datosAExportar.length === 0) return alert("No hay datos para exportar.");
             
             let filasExcel = datosAExportar.map(ins => {
+                let r1 = separarRut(ins.rut1);
+                let r2 = separarRut(ins.rut2);
+                let criaderosUnidos = ins.criadero1 === ins.criadero2 ? ins.criadero1 : `${ins.criadero1} / ${ins.criadero2}`;
+
                 return {
-                    "Rodeo": ins.rodeo,
-                    "Serie": ins.serie,
-                    "Primer Jinete": `${ins.jinete1} (RUT: ${ins.rut1})`,
-                    "Segundo Jinete": `${ins.jinete2} (RUT: ${ins.rut2})`,
-                    "Caballos y Criaderos": `1. ${ins.caballo1} [Criadero: ${ins.criadero1}] \n2. ${ins.caballo2} [Criadero: ${ins.criadero2}]`,
-                    "Clubes / Asociaciones": `1. ${ins.club1} \n2. ${ins.club2}`,
-                    "Teléfonos": `1. ${ins.telefono1} \n2. ${ins.telefono2}`
+                    "club": ins.club1 || "-",
+                    "nombre primer ginete": ins.jinete1 || "-",
+                    "rut( Sin digiti verificador)": r1.cuerpo,
+                    "numero verificador del rut de la tercera columna": r1.dv,
+                    "nombre primer caballo": ins.caballo1 || "-",
+                    "secta columna numero del caballo": ins.nroCaballo1 || "-",
+                    "septima nombre del segundo ginete": ins.jinete2 || "-",
+                    "octava rut del segundo ginete (sin digito verificador)": r2.cuerpo,
+                    "novena digito verificador del segundo ginete": r2.dv,
+                    "decima nombre del segundo caballo": ins.caballo2 || "-",
+                    "columba 11 numero del segundo caballo": ins.nroCaballo2 || "-",
+                    "columna 12 criadero": criaderosUnidos || "-"
                 };
             });
 
             const ws = XLSX.utils.json_to_sheet(filasExcel);
-
             ws['!cols'] = [
-                {wch: 22}, {wch: 18}, {wch: 30}, {wch: 30}, {wch: 38}, {wch: 30}, {wch: 22}
+                {wch: 20}, {wch: 25}, {wch: 15}, {wch: 10}, 
+                {wch: 20}, {wch: 15}, {wch: 25}, {wch: 15}, 
+                {wch: 10}, {wch: 20}, {wch: 15}, {wch: 25}
             ];
 
             const wb = XLSX.utils.book_new();
-            XLSX.utils.book_append_sheet(wb, ws, "Colleras Inscritas");
+            XLSX.utils.book_append_sheet(wb, ws, "Inscripciones Oficinales");
             
-            let nombreArchivo = "Colleras_Santiago_Cumbre";
+            let nombreArchivo = "Inscripciones_Santiago_Cumbre";
             if(filtroRodeo !== "TODOS") nombreArchivo += "_" + filtroRodeo;
             if(filtroSerie !== "TODOS") nombreArchivo += "_" + filtroSerie;
             nombreArchivo += ".xlsx";
@@ -346,7 +370,6 @@
             XLSX.writeFile(wb, nombreArchivo);
         };
 
-        // Temporizador de cuenta regresiva en el panel de administración
         setInterval(() => {
             document.querySelectorAll('.timer-countdown').forEach(el => {
                 const cierre = parseInt(el.getAttribute('data-cierre'));
@@ -354,9 +377,8 @@
                 const dif = cierre - Date.now();
                 
                 if (dif <= 0) {
-                    el.innerText = "⏳ Tiempo expirado"; 
+                    el.innerText = "⏳ Expirado"; 
                     el.style.color = "#c0392b";
-                    // Cerrar automáticamente en la base de datos si expiró el tiempo
                     updateDoc(doc(db, "series", idSerie), { estado: "cerrado" }).catch(()=>{});
                 } else {
                     let s = Math.floor(dif / 1000), h = Math.floor(s / 3600); s %= 3600; let m = Math.floor(s / 60);
