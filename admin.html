@@ -318,7 +318,7 @@
             return { cuerpo: limpio, dv: "" };
         }
 
-        // EXCEL CON LAS 12 COLUMNAS ESTRICTAS SOLICITADAS
+        // EXCEL CON LAS 12 COLUMNAS Y SUS NUEVOS TÍTULOS EXACTOS
         window.exportarExcel = function() {
             const filtroRodeo = document.getElementById('filtroRodeoTabla').value;
             const filtroSerie = document.getElementById('filtroSerieTabla').value;
@@ -337,30 +337,30 @@
                 let criaderosUnidos = ins.criadero1 === ins.criadero2 ? ins.criadero1 : `${ins.criadero1} / ${ins.criadero2}`;
 
                 return {
-                    "club": ins.club1 || "-",
+                    "Club": ins.club1 || "-",
                     "Nombre Primer Jinete": ins.jinete1 || "-",
                     "Rut": r1.cuerpo,
-                    "NV": r1.dv,
+                    "DV": r1.dv,
                     "Nombre Primer Caballo": ins.caballo1 || "-",
-                    "N° Caballo": ins.nroCaballo1 || "-",
-                    "Nombre Segundo Jinete": ins.jinete2 || "-",
+                    "N° Primer Caballo": ins.nroCaballo1 || "-",
+                    "Nombre Segundo jinete": ins.jinete2 || "-",
                     "Rut": r2.cuerpo,
                     "DV": r2.dv,
                     "Nombre Segundo Caballo": ins.caballo2 || "-",
-                    "N° Caballo": ins.nroCaballo2 || "-",
+                    "N° Segundo Caballo": ins.nroCaballo2 || "-",
                     "Criadero": criaderosUnidos || "-"
                 };
             });
 
             const ws = XLSX.utils.json_to_sheet(filasExcel);
             ws['!cols'] = [
-                {wch: 20}, {wch: 25}, {wch: 15}, {wch: 10}, 
-                {wch: 20}, {wch: 15}, {wch: 25}, {wch: 15}, 
-                {wch: 10}, {wch: 20}, {wch: 15}, {wch: 25}
+                {wch: 20}, {wch: 25}, {wch: 15}, {wch: 15}, 
+                {wch: 20}, {wch: 16}, {wch: 25}, {wch: 15}, 
+                {wch: 15}, {wch: 20}, {wch: 16}, {wch: 25}
             ];
 
             const wb = XLSX.utils.book_new();
-            XLSX.utils.book_append_sheet(wb, ws, "Inscripciones Oficinales");
+            XLSX.utils.book_append_sheet(wb, ws, "Inscripciones Oficiales");
             
             let nombreArchivo = "Inscripciones_Santiago_Cumbre";
             if(filtroRodeo !== "TODOS") nombreArchivo += "_" + filtroRodeo;
