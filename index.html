@@ -95,7 +95,7 @@
                         <div class="form-group"><label>RUT:</label><input type="text" id="rut1" placeholder="Ej: 12.345.678-9" oninput="formatearRutInput(this)" required></div>
                         <div class="form-group"><label>Nombre del Caballo:</label><input type="text" id="caballo1" placeholder="Ej: Estallido" required></div>
                         <div class="form-group"><label>N° de Caballo:</label><input type="text" id="nroCaballo1" placeholder="Ej: 152" required></div>
-                        <div class="form-group"><label>Club:</label><input type="text" id="club1" placeholder="Ej: Club Las Condes" required></div>
+                        <div class="form-group"><label>Club:</label><input type="text" id="club1" placeholder="Ej: Club Santiago" required></div>
                         <div class="form-group"><label>Teléfono (Opcional):</label><input type="tel" id="telefono1" placeholder="Ej: 987654321"></div>
                         <div class="form-group"><label>Criadero (Opcional):</label><input type="text" id="criadero1" placeholder="Ej: Palmas de Peñaflor"></div>
                     </div>
@@ -107,7 +107,7 @@
                         <div class="form-group"><label>RUT:</label><input type="text" id="rut2" placeholder="Ej: 9.876.543-2" oninput="formatearRutInput(this)" required></div>
                         <div class="form-group"><label>Nombre del Caballo:</label><input type="text" id="caballo2" placeholder="Ej: Revoltosa" required></div>
                         <div class="form-group"><label>N° de Caballo:</label><input type="text" id="nroCaballo2" placeholder="Ej: 153" required></div>
-                        <div class="form-group"><label>Club:</label><input type="text" id="club2" placeholder="Ej: Club Las Condes" required></div>
+                        <div class="form-group"><label>Club:</label><input type="text" id="club2" placeholder="Ej: Club Vitacura" required></div>
                         <div class="form-group"><label>Teléfono (Opcional):</label><input type="tel" id="telefono2" placeholder="Ej: 912345678"></div>
                         <div class="form-group"><label>Criadero (Opcional):</label><input type="text" id="criadero2" placeholder="Ej: Santa Isabel"></div>
                     </div>
@@ -360,7 +360,10 @@
 
         document.getElementById('registroForm').addEventListener('submit', async function(e) {
             e.preventDefault();
-            if(!selectSerie.value) return alert("Selecciona una serie válida.");
+            const rodeoSel = document.getElementById('rodeo').value;
+            const serieSel = document.getElementById('serie').value;
+            
+            if(!serieSel) return alert("Selecciona una serie válida.");
             
             let rut1Val = document.getElementById('rut1').value.trim();
             let rut2Val = document.getElementById('rut2').value.trim();
@@ -375,10 +378,39 @@
             const archivoComprobante = document.getElementById('comprobante').files[0];
             if(!archivoComprobante) return alert("Adjunta el comprobante de pago.");
 
-            btnRegistrar.innerText = "Subiendo imagen y registrando collera..."; 
+            btnRegistrar.innerText = "Verificando inscripciones y registrando..."; 
             btnRegistrar.disabled = true;
 
             try {
+                // Validación para evitar duplicados en la misma serie y rodeo
+                const qInscritos = query(
+                    collection(db, "inscripciones"), 
+                    where("rodeo", "==", rodeoSel), 
+                    where("serie", "==", serieSel)
+                );
+                const snapshotInscritos = await getDocs(qInscritos);
+
+                let yaInscrito = false;
+                let mensajeErrorDuplicado = "";
+
+                snapshotInscritos.forEach(docSnap => {
+                    const datosIns = docSnap.data();
+                    if(datosIns.rut1 === rut1Val || datosIns.rut2 === rut1Val) {
+                        yaInscrito = true;
+                        mensajeErrorDuplicado = `El Primer Jinete (${rut1Val}) ya se encuentra inscrito en esta serie.`;
+                    } else if(datosIns.rut1 === rut2Val || datosIns.rut2 === rut2Val) {
+                        yaInscrito = true;
+                        mensajeErrorDuplicado = `El Segundo Jinete (${rut2Val}) ya se encuentra inscrito en esta serie.`;
+                    }
+                });
+
+                if(yaInscrito) {
+                    alert("❌ No se pudo completar la inscripción:\n\n" + mensajeErrorDuplicado);
+                    btnRegistrar.innerText = "Subir y Registrar Collera Completa";
+                    btnRegistrar.disabled = false;
+                    return;
+                }
+
                 const apiKeyImgBB = "2f84ad94ca28ab56dceb42ea0a3fa7cc";
                 const formData = new FormData();
                 formData.append("image", archivoComprobante);
@@ -390,8 +422,8 @@
                 if(!resultadoJson.success) throw new Error("Error al subir a ImgBB.");
 
                 let datosAguardar = {
-                    rodeo: document.getElementById('rodeo').value,
-                    serie: document.getElementById('serie').value,
+                    rodeo: rodeoSel,
+                    serie: serieSel,
                     comprobanteUrl: resultadoJson.data.url,
                     estadoPago: "pendiente",
                     fecha: Date.now(),
