@@ -29,9 +29,6 @@
         .alerta-pago { background-color: #e8f8f5; border: 1px solid #a3e4d7; padding: 15px; border-radius: 6px; margin-top: 20px; }
         .seccion-consulta { background: #eaf2f8; border: 1px solid #a4b0be; padding: 15px; border-radius: 6px; margin-bottom: 25px; }
         .resultado-estado { margin-top: 15px; padding: 15px; border-radius: 6px; display: none; font-weight: bold; text-align: center; }
-        .estado-pendiente { background: #fcf3cf; color: #7d6608; border: 1px solid #f9e79f; }
-        .estado-aprobada { background: #d4efdf; color: #145a32; border: 1px solid #a9dfbf; }
-        .estado-rechazada { background: #fadbd8; color: #78281f; border: 1px solid #f5b7b1; }
         .auto-fill-hint { font-size: 11px; color: #2980b9; margin-top: 2px; display: block; font-style: italic; }
     </style>
 </head>
@@ -97,16 +94,16 @@
                             <input type="text" id="rut1" placeholder="Ej: 12.345.678-9" oninput="formatearRutInput(this); autocompletarJinete(1);" required>
                             <span class="auto-fill-hint">💡 Al ingresar un RUT registrado, sus datos se completarán solos.</span>
                         </div>
-                        <div class="form-group"><label>Nombre Completo:</label><input type="text" id="nombre1" placeholder="Ej: Juan Pérez" required></div>
+                        <div class="form-group"><label>Nombre Completo:</label><input type="text" id="nombre1" placeholder="Ej: JUAN PÉREZ" required style="text-transform: uppercase;"></div>
                         <div class="form-group">
                             <label>N° de Caballo:</label>
                             <input type="text" id="nroCaballo1" placeholder="Ej: 152" oninput="autocompletarCaballo(1)" required>
                             <span class="auto-fill-hint">💡 Ingresar número de caballo conocido autocompletará su nombre.</span>
                         </div>
-                        <div class="form-group"><label>Nombre del Caballo:</label><input type="text" id="caballo1" placeholder="Ej: Estallido" required></div>
-                        <div class="form-group"><label>Club:</label><input type="text" id="club1" placeholder="Ej: Club Santiago" required></div>
+                        <div class="form-group"><label>Nombre del Caballo:</label><input type="text" id="caballo1" placeholder="Ej: ESTALLIDO" required style="text-transform: uppercase;"></div>
+                        <div class="form-group"><label>Club:</label><input type="text" id="club1" placeholder="Ej: CLUB SANTIAGO" required style="text-transform: uppercase;"></div>
                         <div class="form-group"><label>Teléfono (Opcional):</label><input type="tel" id="telefono1" placeholder="Ej: 987654321"></div>
-                        <div class="form-group"><label>Criadero (Opcional):</label><input type="text" id="criadero1" placeholder="Ej: Palmas de Peñaflor"></div>
+                        <div class="form-group"><label>Criadero (Opcional):</label><input type="text" id="criadero1" placeholder="Ej: PALMAS DE PEÑAFLOR" style="text-transform: uppercase;"></div>
                     </div>
 
                     <!-- JINETE 2 -->
@@ -117,16 +114,16 @@
                             <input type="text" id="rut2" placeholder="Ej: 9.876.543-2" oninput="formatearRutInput(this); autocompletarJinete(2);" required>
                             <span class="auto-fill-hint">💡 Al ingresar un RUT registrado, sus datos se completarán solos.</span>
                         </div>
-                        <div class="form-group"><label>Nombre Completo:</label><input type="text" id="nombre2" placeholder="Ej: Pedro González" required></div>
+                        <div class="form-group"><label>Nombre Completo:</label><input type="text" id="nombre2" placeholder="Ej: PEDRO GONZÁLEZ" required style="text-transform: uppercase;"></div>
                         <div class="form-group">
                             <label>N° de Caballo:</label>
                             <input type="text" id="nroCaballo2" placeholder="Ej: 153" oninput="autocompletarCaballo(2)" required>
                             <span class="auto-fill-hint">💡 Ingresar número de caballo conocido autocompletará su nombre.</span>
                         </div>
-                        <div class="form-group"><label>Nombre del Caballo:</label><input type="text" id="caballo2" placeholder="Ej: Revoltosa" required></div>
-                        <div class="form-group"><label>Club:</label><input type="text" id="club2" placeholder="Ej: Club Vitacura" required></div>
+                        <div class="form-group"><label>Nombre del Caballo:</label><input type="text" id="caballo2" placeholder="Ej: REVOLTOSA" required style="text-transform: uppercase;"></div>
+                        <div class="form-group"><label>Club:</label><input type="text" id="club2" placeholder="Ej: CLUB VITACURA" required style="text-transform: uppercase;"></div>
                         <div class="form-group"><label>Teléfono (Opcional):</label><input type="tel" id="telefono2" placeholder="Ej: 912345678"></div>
-                        <div class="form-group"><label>Criadero (Opcional):</label><input type="text" id="criadero2" placeholder="Ej: Santa Isabel"></div>
+                        <div class="form-group"><label>Criadero (Opcional):</label><input type="text" id="criadero2" placeholder="Ej: SANTA ISABEL" style="text-transform: uppercase;"></div>
                     </div>
 
                     <div class="alerta-pago">
@@ -172,7 +169,7 @@
         
         let unsubscribeSeries = null; 
         let cronometroInterval = null;
-        let historialInscripcionesCache = []; // Caché local para autocompletar rápido
+        let historialInscripcionesCache = [];
 
         window.validarRutChileno = function(rutCompleto) {
             rutCompleto = rutCompleto.replace(/\./g, '').replace(/-/g, '').trim();
@@ -209,7 +206,6 @@
             }
         }
 
-        // Cargar caché de inscripciones en tiempo real para autocompletar
         onSnapshot(collection(db, "inscripciones"), (snapshot) => {
             historialInscripcionesCache = [];
             snapshot.forEach(d => {
@@ -217,12 +213,10 @@
             });
         });
 
-        // Función para autocompletar datos del jinete por RUT
         window.autocompletarJinete = function(numJinete) {
             const rutInputVal = document.getElementById(`rut${numJinete}`).value.trim();
-            if(rutInputVal.length < 7) return; // Esperar a que el RUT esté casi completo
+            if(rutInputVal.length < 7) return;
 
-            // Buscar coincidencia en inscripciones anteriores (como Jinete 1 o Jinete 2)
             for(let ins of historialInscripcionesCache) {
                 if(ins.rut1 === rutInputVal) {
                     document.getElementById(`nombre${numJinete}`).value = ins.jinete1 || "";
@@ -240,7 +234,6 @@
             }
         };
 
-        // Función para autocompletar nombre de caballo por su número
         window.autocompletarCaballo = function(numCaballo) {
             const nroVal = document.getElementById(`nroCaballo${numCaballo}`).value.trim();
             if(!nroVal) return;
@@ -483,6 +476,7 @@
                 const resultadoJson = await respuestaImgBB.json();
                 if(!resultadoJson.success) throw new Error("Error al subir a ImgBB.");
 
+                // NORMALIZACIÓN A MAYÚSCULAS PARA EVITAR DUPLICADOS POR FORMATO DE TEXTO
                 let datosAguardar = {
                     rodeo: rodeoSel,
                     serie: serieSel,
@@ -491,21 +485,21 @@
                     fecha: Date.now(),
                     estado: "activo",
                     
-                    jinete1: document.getElementById('nombre1').value,
+                    jinete1: (document.getElementById('nombre1').value || "").trim().toUpperCase(),
                     rut1: rut1Val,
-                    caballo1: document.getElementById('caballo1').value,
-                    nroCaballo1: document.getElementById('nroCaballo1').value,
-                    club1: document.getElementById('club1').value,
-                    telefono1: document.getElementById('telefono1').value || "-",
-                    criadero1: document.getElementById('criadero1').value || "Sin criadero",
+                    caballo1: (document.getElementById('caballo1').value || "").trim().toUpperCase(),
+                    nroCaballo1: (document.getElementById('nroCaballo1').value || "").trim(),
+                    club1: (document.getElementById('club1').value || "").trim().toUpperCase(),
+                    telefono1: (document.getElementById('telefono1').value || "").trim() || "-",
+                    criadero1: (document.getElementById('criadero1').value || "").trim().toUpperCase() || "SIN CRIADERO",
 
-                    jinete2: document.getElementById('nombre2').value,
+                    jinete2: (document.getElementById('nombre2').value || "").trim().toUpperCase(),
                     rut2: rut2Val,
-                    caballo2: document.getElementById('caballo2').value,
-                    nroCaballo2: document.getElementById('nroCaballo2').value,
-                    club2: document.getElementById('club2').value,
-                    telefono2: document.getElementById('telefono2').value || "-",
-                    criadero2: document.getElementById('criadero2').value || "Sin criadero"
+                    caballo2: (document.getElementById('caballo2').value || "").trim().toUpperCase(),
+                    nroCaballo2: (document.getElementById('nroCaballo2').value || "").trim(),
+                    club2: (document.getElementById('club2').value || "").trim().toUpperCase(),
+                    telefono2: (document.getElementById('telefono2').value || "").trim() || "-",
+                    criadero2: (document.getElementById('criadero2').value || "").trim().toUpperCase() || "SIN CRIADERO"
                 };
 
                 await addDoc(collection(db, "inscripciones"), datosAguardar);
