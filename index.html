@@ -42,10 +42,10 @@
         <!-- CONSULTAR ESTADO -->
         <div class="section seccion-consulta">
             <h3>🔍 Consultar Estado de Inscripción</h3>
-            <p style="font-size: 14px; color: #555;">Ingresa el RUT del Primer Jinete y selecciona el rodeo para verificar tu pago:</p>
+            <p style="font-size: 14px; color: #555;">Ingresa el RUT de cualquiera de los dos jinetes para verificar el estado de la collera:</p>
             
             <div class="form-group">
-                <label>RUT del Primer Jinete:</label>
+                <label>RUT del Jinete (1° o 2°):</label>
                 <input type="text" id="rutConsulta" placeholder="Ej: 12.345.678-9" oninput="formatearRutInput(this)">
             </div>
 
@@ -156,7 +156,6 @@
         let unsubscribeSeries = null; 
         let cronometroInterval = null;
 
-        // Validador oficial de RUT Chileno
         window.validarRutChileno = function(rutCompleto) {
             rutCompleto = rutCompleto.replace(/\./g, '').replace(/-/g, '').trim();
             if (rutCompleto.length < 2) return false;
@@ -180,7 +179,6 @@
             return dvCalculado === dv;
         }
 
-        // Formateador automático visual de RUT (ej: 12.345.678-9)
         window.formatearRutInput = function(input) {
             let valor = input.value.replace(/[^0-9kK]/g, '');
             if (valor.length > 1) {
@@ -224,6 +222,7 @@
             });
         }
 
+        // CONSULTA AMPLIADA: Busca si el RUT ingresado está como Primer Jinete o como Segundo Jinete
         window.consultarEstado = async function() {
             const rutBuscado = document.getElementById('rutConsulta').value.trim();
             const rodeoSeleccionado = filtroConsultaRodeo.value;
@@ -239,49 +238,49 @@
             cajaResultado.innerText = "Buscando inscripciones...";
 
             try {
-                const q = query(collection(db, "inscripciones"), where("rut1", "==", rutBuscado));
-                const snapshot = await getDocs(q);
+                // Buscamos tanto en rut1 como en rut2 trayendo todas las inscripciones
+                const snapshot = await getDocs(collection(db, "inscripciones"));
 
-                if(snapshot.empty) {
+                let listaHTML = "<div style='font-weight: bold; margin-bottom: 10px; border-bottom: 1px solid #ccc; padding-bottom: 5px;'>📋 Historial de Colleras:</div>";
+                let count = 0;
+
+                snapshot.forEach(docSnap => {
+                    const datos = docSnap.data();
+                    if(datos.estado === "eliminado") return;
+                    
+                    // Verificamos si el RUT buscado coincide con el jinete 1 o el jinete 2
+                    if(datos.rut1 !== rutBuscado && datos.rut2 !== rutBuscado) return;
+                    
+                    // Aplicar filtro de rodeo si no es "TODOS"
+                    if(rodeoSeleccionado !== "TODOS" && datos.rodeo !== rodeoSeleccionado) return;
+
+                    count++;
+                    let estadoTexto = datos.estadoPago || "pendiente";
+                    let estiloCaja = estadoTexto === "aprobado" ? "background: #d4efdf; color: #145a32; border: 1px solid #a9dfbf;" :
+                                     estadoTexto === "rechazado" ? "background: #fadbd8; color: #78281f; border: 1px solid #f5b7b1;" :
+                                     "background: #fcf3cf; color: #7d6608; border: 1px solid #f9e79f;";
+                    
+                    let textoEstado = estadoTexto === "aprobado" ? "✅ PAGO APROBADO" : estadoTexto === "rechazado" ? "❌ PAGO RECHAZADO" : "⏳ PENDIENTE DE REVISIÓN";
+                    let fechaForm = datos.fecha ? new Date(datos.fecha).toLocaleString() : "";
+
+                    listaHTML += `
+                        <div style="margin-top: 10px; padding: 12px; border-radius: 6px; text-align: left; ${estiloCaja}">
+                            <strong>📅 Fecha:</strong> ${fechaForm} <br>
+                            <strong>🤠 Rodeo:</strong> ${datos.rodeo} | <strong>Serie:</strong> ${datos.serie} <br>
+                            <strong>Collera:</strong> ${datos.jinete1} y ${datos.jinete2} <br>
+                            <strong>Estado:</strong> ${textoEstado}
+                        </div>
+                    `;
+                });
+
+                if(count === 0) {
                     cajaResultado.className = "resultado-estado estado-rechazada";
-                    cajaResultado.innerText = "❌ No se encontró ninguna collera con este RUT como Primer Jinete.";
+                    cajaResultado.innerText = "❌ No se encontró ninguna inscripción asociada a este RUT.";
                 } else {
-                    let listaHTML = "<div style='font-weight: bold; margin-bottom: 10px; border-bottom: 1px solid #ccc; padding-bottom: 5px;'>📋 Historial de Colleras:</div>";
-                    let count = 0;
-
-                    snapshot.forEach(docSnap => {
-                        const datos = docSnap.data();
-                        if(datos.estado === "eliminado") return;
-                        if(rodeoSeleccionado !== "TODOS" && datos.rodeo !== rodeoSeleccionado) return;
-
-                        count++;
-                        let estadoTexto = datos.estadoPago || "pendiente";
-                        let estiloCaja = estadoTexto === "aprobado" ? "background: #d4efdf; color: #145a32; border: 1px solid #a9dfbf;" :
-                                         estadoTexto === "rechazado" ? "background: #fadbd8; color: #78281f; border: 1px solid #f5b7b1;" :
-                                         "background: #fcf3cf; color: #7d6608; border: 1px solid #f9e79f;";
-                        
-                        let textoEstado = estadoTexto === "aprobado" ? "✅ PAGO APROBADO" : estadoTexto === "rechazado" ? "❌ PAGO RECHAZADO" : "⏳ PENDIENTE DE REVISIÓN";
-                        let fechaForm = datos.fecha ? new Date(datos.fecha).toLocaleString() : "";
-
-                        listaHTML += `
-                            <div style="margin-top: 10px; padding: 12px; border-radius: 6px; text-align: left; ${estiloCaja}">
-                                <strong>📅 Fecha:</strong> ${fechaForm} <br>
-                                <strong>🤠 Rodeo:</strong> ${datos.rodeo} | <strong>Serie:</strong> ${datos.serie} <br>
-                                <strong>Collera:</strong> ${datos.jinete1} y ${datos.jinete2} <br>
-                                <strong>Estado:</strong> ${textoEstado}
-                            </div>
-                        `;
-                    });
-
-                    if(count === 0) {
-                        cajaResultado.className = "resultado-estado estado-rechazada";
-                        cajaResultado.innerText = "❌ No hay registros para el filtro seleccionado.";
-                    } else {
-                        cajaResultado.className = "resultado-estado";
-                        cajaResultado.style.background = "#fff";
-                        cajaResultado.style.border = "1px solid #b2bec3";
-                        cajaResultado.innerHTML = listaHTML;
-                    }
+                    cajaResultado.className = "resultado-estado";
+                    cajaResultado.style.background = "#fff";
+                    cajaResultado.style.border = "1px solid #b2bec3";
+                    cajaResultado.innerHTML = listaHTML;
                 }
             } catch (err) {
                 cajaResultado.className = "resultado-estado estado-rechazada";
@@ -375,7 +374,6 @@
                 return alert("El RUT del Segundo Jinete no es válido. Por favor verifíquelo.");
             }
 
-            // NUEVA VALIDACIÓN: Evitar que ambos jinetes tengan el mismo RUT en la misma collera
             if(rut1Val === rut2Val) {
                 return alert("❌ Error: El Primer Jinete y el Segundo Jinete no pueden ser la misma persona (tienen el mismo RUT).");
             }
@@ -387,7 +385,6 @@
             btnRegistrar.disabled = true;
 
             try {
-                // Validación para evitar duplicados de jinetes ya inscritos en la misma serie y rodeo
                 const qInscritos = query(
                     collection(db, "inscripciones"), 
                     where("rodeo", "==", rodeoSel), 
@@ -434,7 +431,6 @@
                     fecha: Date.now(),
                     estado: "activo",
                     
-                    // Jinete 1
                     jinete1: document.getElementById('nombre1').value,
                     rut1: rut1Val,
                     caballo1: document.getElementById('caballo1').value,
@@ -443,7 +439,6 @@
                     telefono1: document.getElementById('telefono1').value || "-",
                     criadero1: document.getElementById('criadero1').value || "Sin criadero",
 
-                    // Jinete 2
                     jinete2: document.getElementById('nombre2').value,
                     rut2: rut2Val,
                     caballo2: document.getElementById('caballo2').value,
