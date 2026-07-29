@@ -318,7 +318,7 @@
             return { cuerpo: limpio, dv: "" };
         }
 
-        // EXCEL CON LAS NUEVAS COLUMNAS (RODEO, SERIE, FECHA, ESTADO, N° COLLERA, LINK FOTO) Y LAS 12 ORIGINALES
+        // EXCEL CON ORDEN SOLICITADO: Fecha solo día/mes/año y Link de pago al final
         window.exportarExcel = function() {
             const filtroRodeo = document.getElementById('filtroRodeoTabla').value;
             const filtroSerie = document.getElementById('filtroSerieTabla').value;
@@ -335,7 +335,14 @@
                 let r1 = separarRut(ins.rut1);
                 let r2 = separarRut(ins.rut2);
                 let criaderosUnidos = ins.criadero1 === ins.criadero2 ? ins.criadero1 : `${ins.criadero1} / ${ins.criadero2}`;
-                let fechaFormateada = ins.fecha ? new Date(ins.fecha).toLocaleString() : "-";
+                
+                // Formato de fecha limpio (Solo día, mes y año sin hora)
+                let fechaFormateada = "-";
+                if(ins.fecha) {
+                    let d = new Date(ins.fecha);
+                    fechaFormateada = d.toLocaleDateString('es-CL');
+                }
+
                 let estadoPagoTexto = (ins.estadoPago || "pendiente").toUpperCase();
 
                 return {
@@ -344,7 +351,6 @@
                     "Fecha": fechaFormateada,
                     "Estado Pago": estadoPagoTexto,
                     "N° Collera": ins.nroCollera || "",
-                    "Link Comprobante (ImgBB)": ins.comprobanteUrl || "-",
                     "Club": ins.club1 || "-",
                     "Nombre Primer Jinete": ins.jinete1 || "-",
                     "Rut(Sin DV)": r1.cuerpo,
@@ -356,13 +362,14 @@
                     "DV Segundo Jinete": r2.dv,
                     "Nombre Segundo Caballo": ins.caballo2 || "-",
                     "N° Segundo Caballo": ins.nroCaballo2 || "-",
-                    "Criadero": criaderosUnidos || "-"
+                    "Criadero": criaderosUnidos || "-",
+                    "Link Comprobante (ImgBB)": ins.comprobanteUrl || "-"
                 };
             });
 
             const ws = XLSX.utils.json_to_sheet(filasExcel);
 
-            // Estilos y bordes profesionales para las celdas
+            // Estilos, bordes y diseño profesional
             const range = XLSX.utils.decode_range(ws['!ref']);
             for (let R = range.s.r; R <= range.e.r; ++R) {
                 for (let C = range.s.c; C <= range.e.c; ++C) {
