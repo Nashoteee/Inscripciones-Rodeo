@@ -17,7 +17,7 @@
         .subtitulo-admin { text-align: center; color: #bdc3c7; font-weight: bold; margin-bottom: 25px; text-transform: uppercase; letter-spacing: 1px; }
         
         .card { background: white; padding: 20px; border-radius: 8px; margin-bottom: 20px; box-shadow: 0 2px 5px rgba(0,0,0,0.1); }
-        .card h3 { margin-top: 0; color: #2c3e50; border-bottom: 2px solid #ecf0f1; padding-bottom: 10px; }
+        .card h3 { margin-top: 0; color: #2c3e50; border-bottom: 2px solid #ecf0f1; padding-bottom: 10px; display: flex; justify-content: space-between; align-items: center; flex-wrap: wrap; gap: 10px; }
         
         .flex-grid { display: flex; gap: 20px; flex-wrap: wrap; }
         .col { flex: 1; min-width: 300px; }
@@ -74,9 +74,17 @@
         <h1>⚙️ Panel de Administración</h1>
         <div class="subtitulo-admin">Asociación de Rodeo Santiago Cumbre</div>
 
-        <!-- NUEVA SECCIÓN: CONTADORES DE COLLERAS INSCRITAS POR SERIE -->
+        <!-- SECCIÓN: CONTADORES DE COLLERAS INSCRITAS CON FILTRO POR RODEO -->
         <div class="card">
-            <h3>📊 Resumen y Contadores de Colleras por Serie</h3>
+            <h3>
+                <span>📊 Resumen y Contadores de Colleras por Serie</span>
+                <div style="display: flex; align-items: center; gap: 8px; font-size: 14px; font-weight: normal;">
+                    <label for="filtroRodeoContadores" style="margin: 0; color: #555; font-size: 13px;">Filtrar:</label>
+                    <select id="filtroRodeoContadores" onchange="actualizarContadoresSeries()" style="margin: 0; padding: 6px 10px; font-size: 13px; width: 220px;">
+                        <option value="TODOS">🌐 Todos los Rodeos</option>
+                    </select>
+                </div>
+            </h3>
             <p style="font-size: 13px; color: #666; margin-top: -5px;">Monitorea en tiempo real el estado de las inscripciones de tu campeonato:</p>
             <div id="contenedorContadoresSeries" class="grid-contadores">
                 <p style="color: #888; font-style: italic;">Cargando estadísticas...</p>
@@ -171,15 +179,21 @@
                 const contenedorRodeos = document.getElementById('listaRodeos');
                 const selectorRodeoParaSerie = document.getElementById('rodeoParaSerie');
                 const filtroRodeoTabla = document.getElementById('filtroRodeoTabla');
+                const filtroRodeoContadores = document.getElementById('filtroRodeoContadores');
                 
                 contenedorRodeos.innerHTML = '';
                 selectorRodeoParaSerie.innerHTML = '<option value="">1. Seleccione a qué Rodeo pertenece la serie...</option>';
-                const seleccionRodeoActual = filtroRodeoTabla.value;
+                
+                const seleccionRodeoActualTabla = filtroRodeoTabla.value;
+                const seleccionRodeoActualContadores = filtroRodeoContadores.value;
+
                 filtroRodeoTabla.innerHTML = '<option value="TODOS">Todos los Rodeos</option>';
+                filtroRodeoContadores.innerHTML = '<option value="TODOS">🌐 Todos los Rodeos</option>';
 
                 snapshot.forEach(d => {
                     const data = d.data();
                     filtroRodeoTabla.innerHTML += `<option value="${data.nombre}">${data.nombre}</option>`;
+                    filtroRodeoContadores.innerHTML += `<option value="${data.nombre}">${data.nombre}</option>`;
                     
                     let estadoTexto = data.estado === "abierto" ? `<span class="timer">Abierto</span>` : `<span style="color:#e74c3c; font-size:12px; font-weight:bold;">Cerrado</span>`;
                     
@@ -195,7 +209,8 @@
                         selectorRodeoParaSerie.innerHTML += `<option value="${data.nombre}">${data.nombre}</option>`;
                     }
                 });
-                filtroRodeoTabla.value = seleccionRodeoActual || "TODOS";
+                filtroRodeoTabla.value = seleccionRodeoActualTabla || "TODOS";
+                filtroRodeoContadores.value = seleccionRodeoActualContadores || "TODOS";
             });
 
             onSnapshot(collection(db, "series"), (snapshot) => {
@@ -248,20 +263,26 @@
             });
         }
 
-        // FUNCIÓN PARA CALCULAR Y RENDERIZAR LOS CONTADORES POR SERIE
-        function actualizarContadoresSeries() {
+        // FUNCIÓN ACTUALIZADA: Calcula contadores respetando el filtro de rodeo seleccionado
+        window.actualizarContadoresSeries = function() {
             const contenedorContadores = document.getElementById('contenedorContadoresSeries');
+            const rodeoSeleccionadoFiltro = document.getElementById('filtroRodeoContadores').value;
             if(!contenedorContadores) return;
 
-            if(seriesGlobales.length === 0) {
-                contenedorContadores.innerHTML = `<p style="color: #777; font-style: italic;">No hay series registradas actualmente.</p>`;
+            // Filtrar series según el rodeo seleccionado
+            const seriesFiltradas = seriesGlobales.filter(s => {
+                if(rodeoSeleccionadoFiltro !== "TODOS" && s.rodeoNombre !== rodeoSeleccionadoFiltro) return false;
+                return true;
+            });
+
+            if(seriesFiltradas.length === 0) {
+                contenedorContadores.innerHTML = `<p style="color: #777; font-style: italic;">No hay series registradas para el filtro seleccionado.</p>`;
                 return;
             }
 
             let htmlContadores = "";
 
-            seriesGlobales.forEach(serie => {
-                // Filtramos las inscripciones que pertenecen a esta serie y rodeo específico
+            seriesFiltradas.forEach(serie => {
                 const inscritasEnSerie = inscripcionesGlobales.filter(ins => ins.serie === serie.nombre && ins.rodeo === serie.rodeoNombre);
                 
                 let total = inscritasEnSerie.length;
