@@ -52,6 +52,13 @@
         th { background-color: #f4f4f4; color: #333;}
         .meta-info { font-size: 12px; color: #7f8c8d; display: block;}
         .acciones-col { width: 130px; }
+
+        /* Estilos para las tarjetas de contadores por serie */
+        .grid-contadores { display: grid; grid-template-columns: repeat(auto-fill, minmax(260px, 1fr)); gap: 15px; margin-top: 15px; }
+        .card-serie-contador { background: #f8f9fa; border: 1px solid #cbd5e1; border-radius: 6px; padding: 15px; border-left: 5px solid #2980b9; }
+        .card-serie-contador h4 { margin: 0 0 10px 0; color: #1e293b; font-size: 16px; border-bottom: 1px solid #e2e8f0; padding-bottom: 6px; }
+        .stats-row { display: flex; justify-content: space-between; font-size: 13px; margin-bottom: 6px; font-weight: 500; }
+        .stat-val { font-weight: bold; padding: 1px 6px; border-radius: 4px; }
     </style>
 </head>
 <body>
@@ -66,6 +73,15 @@
     <div class="admin-dashboard" id="adminDashboard">
         <h1>⚙️ Panel de Administración</h1>
         <div class="subtitulo-admin">Asociación de Rodeo Santiago Cumbre</div>
+
+        <!-- NUEVA SECCIÓN: CONTADORES DE COLLERAS INSCRITAS POR SERIE -->
+        <div class="card">
+            <h3>📊 Resumen y Contadores de Colleras por Serie</h3>
+            <p style="font-size: 13px; color: #666; margin-top: -5px;">Monitorea en tiempo real el estado de las inscripciones de tu campeonato:</p>
+            <div id="contenedorContadoresSeries" class="grid-contadores">
+                <p style="color: #888; font-style: italic;">Cargando estadísticas...</p>
+            </div>
+        </div>
 
         <div class="flex-grid">
             <div class="col card">
@@ -139,6 +155,7 @@
         const db = getFirestore(app);
         
         let inscripcionesGlobales = [];
+        let seriesGlobales = [];
         window.seriesCerrando = {}; 
 
         window.verificarPassword = function() {
@@ -188,8 +205,12 @@
                 const seleccionSerieActual = filtroSerieTabla.value;
                 filtroSerieTabla.innerHTML = '<option value="TODOS">Todas las Series</option>';
 
+                seriesGlobales = [];
                 snapshot.forEach(d => {
                     const data = d.data();
+                    data.id = d.id;
+                    seriesGlobales.push(data);
+
                     filtroSerieTabla.innerHTML += `<option value="${data.nombre}">${data.nombre} (${data.rodeoNombre})</option>`;
                     
                     let infoEstadoSerie = "";
@@ -212,6 +233,7 @@
                         </div>`;
                 });
                 filtroSerieTabla.value = seleccionSerieActual || "TODOS";
+                actualizarContadoresSeries();
             });
 
             onSnapshot(collection(db, "inscripciones"), (snapshot) => {
@@ -222,7 +244,43 @@
                     inscripcionesGlobales.push(ins);
                 });
                 renderizarTabla();
+                actualizarContadoresSeries();
             });
+        }
+
+        // FUNCIÓN PARA CALCULAR Y RENDERIZAR LOS CONTADORES POR SERIE
+        function actualizarContadoresSeries() {
+            const contenedorContadores = document.getElementById('contenedorContadoresSeries');
+            if(!contenedorContadores) return;
+
+            if(seriesGlobales.length === 0) {
+                contenedorContadores.innerHTML = `<p style="color: #777; font-style: italic;">No hay series registradas actualmente.</p>`;
+                return;
+            }
+
+            let htmlContadores = "";
+
+            seriesGlobales.forEach(serie => {
+                // Filtramos las inscripciones que pertenecen a esta serie y rodeo específico
+                const inscritasEnSerie = inscripcionesGlobales.filter(ins => ins.serie === serie.nombre && ins.rodeo === serie.rodeoNombre);
+                
+                let total = inscritasEnSerie.length;
+                let aprobadas = inscritasEnSerie.filter(ins => ins.estadoPago === "aprobado").length;
+                let pendientes = inscritasEnSerie.filter(ins => !ins.estadoPago || ins.estadoPago === "pendiente").length;
+                let rechazadas = inscritasEnSerie.filter(ins => ins.estadoPago === "rechazado").length;
+
+                htmlContadores += `
+                    <div class="card-serie-contador">
+                        <h4>${serie.nombre} <span style="font-size: 11px; color: #64748b; display: block; font-weight: normal;">Rodeo: ${serie.rodeoNombre}</span></h4>
+                        <div class="stats-row"><span>Total Colleras:</span> <span class="stat-val" style="background: #e2e8f0; color: #1e293b;">${total}</span></div>
+                        <div class="stats-row"><span>✅ Aprobadas:</span> <span class="stat-val" style="background: #dcfce7; color: #166534;">${aprobadas}</span></div>
+                        <div class="stats-row"><span>⏳ Pendientes:</span> <span class="stat-val" style="background: #fef9c3; color: #854d0e;">${pendientes}</span></div>
+                        <div class="stats-row"><span>❌ Rechazadas:</span> <span class="stat-val" style="background: #fee2e2; color: #991b1b;">${rechazadas}</span></div>
+                    </div>
+                `;
+            });
+
+            contenedorContadores.innerHTML = htmlContadores;
         }
 
         window.renderizarTabla = function() {
@@ -318,7 +376,6 @@
             return { cuerpo: limpio, dv: "" };
         }
 
-        // EXCEL CON NÚMERO CORRELATIVO INDEPENDIENTE POR SERIE
         window.exportarExcel = function() {
             const filtroRodeo = document.getElementById('filtroRodeoTabla').value;
             const filtroSerie = document.getElementById('filtroSerieTabla').value;
@@ -331,7 +388,6 @@
 
             if(datosAExportar.length === 0) return alert("No hay datos para exportar.");
 
-            // Ordenamos los datos por Serie para que el conteo correlativo funcione perfecto
             datosAExportar.sort((a, b) => (a.serie || "").localeCompare(b.serie || ""));
 
             let contadoresPorSerie = {};
@@ -339,7 +395,6 @@
             let filasExcel = datosAExportar.map(ins => {
                 let nombreSerie = ins.serie || "General";
                 
-                // Si la serie no tiene contador iniciado, comienza en 1. Si ya existe, suma 1.
                 if(!contadoresPorSerie[nombreSerie]) {
                     contadoresPorSerie[nombreSerie] = 1;
                 } else {
@@ -384,7 +439,6 @@
 
             const ws = XLSX.utils.json_to_sheet(filasExcel);
 
-            // Estilos, bordes y diseño profesional
             const range = XLSX.utils.decode_range(ws['!ref']);
             for (let R = range.s.r; R <= range.e.r; ++R) {
                 for (let C = range.s.c; C <= range.e.c; ++C) {
@@ -401,7 +455,7 @@
                     };
 
                     if (R === 0) {
-                        ws[cellAddress].s.fill = { fgColor: { rgb: "1F4E78" } }; // Azul institucional
+                        ws[cellAddress].s.fill = { fgColor: { rgb: "1F4E78" } };
                         ws[cellAddress].s.font = { color: { rgb: "FFFFFF" }, bold: true, name: "Calibri", sz: 11 };
                         ws[cellAddress].s.alignment = { horizontal: "center", vertical: "center" };
                     } else {
@@ -411,7 +465,6 @@
                 }
             }
 
-            // Autoajuste dinámico de ancho de columnas
             const colWidths = [];
             for (let C = range.s.c; C <= range.e.c; ++C) {
                 let maxWidth = 10;
