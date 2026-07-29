@@ -318,7 +318,7 @@
             return { cuerpo: limpio, dv: "" };
         }
 
-        // EXCEL CON ORDEN SOLICITADO: Fecha solo día/mes/año y Link de pago al final
+        // EXCEL CON NÚMERO CORRELATIVO INDEPENDIENTE POR SERIE
         window.exportarExcel = function() {
             const filtroRodeo = document.getElementById('filtroRodeoTabla').value;
             const filtroSerie = document.getElementById('filtroSerieTabla').value;
@@ -330,13 +330,28 @@
             });
 
             if(datosAExportar.length === 0) return alert("No hay datos para exportar.");
+
+            // Ordenamos los datos por Serie para que el conteo correlativo funcione perfecto
+            datosAExportar.sort((a, b) => (a.serie || "").localeCompare(b.serie || ""));
+
+            let contadoresPorSerie = {};
             
             let filasExcel = datosAExportar.map(ins => {
+                let nombreSerie = ins.serie || "General";
+                
+                // Si la serie no tiene contador iniciado, comienza en 1. Si ya existe, suma 1.
+                if(!contadoresPorSerie[nombreSerie]) {
+                    contadoresPorSerie[nombreSerie] = 1;
+                } else {
+                    contadoresPorSerie[nombreSerie]++;
+                }
+
+                let numeroColleraCorrelativo = contadoresPorSerie[nombreSerie];
+
                 let r1 = separarRut(ins.rut1);
                 let r2 = separarRut(ins.rut2);
                 let criaderosUnidos = ins.criadero1 === ins.criadero2 ? ins.criadero1 : `${ins.criadero1} / ${ins.criadero2}`;
                 
-                // Formato de fecha limpio (Solo día, mes y año sin hora)
                 let fechaFormateada = "-";
                 if(ins.fecha) {
                     let d = new Date(ins.fecha);
@@ -347,10 +362,10 @@
 
                 return {
                     "Rodeo": ins.rodeo || "-",
-                    "Serie": ins.serie || "-",
+                    "Serie": nombreSerie,
                     "Fecha": fechaFormateada,
                     "Estado Pago": estadoPagoTexto,
-                    "N° Collera": ins.nroCollera || "",
+                    "N° Collera": numeroColleraCorrelativo,
                     "Club": ins.club1 || "-",
                     "Nombre Primer Jinete": ins.jinete1 || "-",
                     "Rut(Sin DV)": r1.cuerpo,
