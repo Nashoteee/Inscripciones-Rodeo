@@ -375,6 +375,11 @@
                 return alert("El RUT del Segundo Jinete no es válido. Por favor verifíquelo.");
             }
 
+            // NUEVA VALIDACIÓN: Evitar que ambos jinetes tengan el mismo RUT en la misma collera
+            if(rut1Val === rut2Val) {
+                return alert("❌ Error: El Primer Jinete y el Segundo Jinete no pueden ser la misma persona (tienen el mismo RUT).");
+            }
+
             const archivoComprobante = document.getElementById('comprobante').files[0];
             if(!archivoComprobante) return alert("Adjunta el comprobante de pago.");
 
@@ -382,7 +387,7 @@
             btnRegistrar.disabled = true;
 
             try {
-                // Validación para evitar duplicados en la misma serie y rodeo
+                // Validación para evitar duplicados de jinetes ya inscritos en la misma serie y rodeo
                 const qInscritos = query(
                     collection(db, "inscripciones"), 
                     where("rodeo", "==", rodeoSel), 
