@@ -93,12 +93,24 @@
 
         async function sha256(m) { const buf = await crypto.subtle.digest('SHA-256', new TextEncoder().encode(m)); return Array.from(new Uint8Array(buf)).map(b => b.toString(16).padStart(2, '0')).join(''); }
 
-        window.verificarPassword = async function() {
-            if(await sha256(document.getElementById('passInput').value) === "80467793d5674c20794109848f93e36e395015b63013898f7e2576b5cf849206") {
+window.verificarPassword = async function() {
+            const inputPass = document.getElementById('passInput').value;
+            const hashIngresado = await sha256(inputPass);
+            
+            // Reemplazaremos este valor vacío con el hash real que te dé el sistema
+            const hashCorrecto = "AQUI_IRÁ_EL_NUEVO_HASH";
+
+            // Truco temporal: Te deja entrar con la clave normal y te muestra el hash real
+            if(inputPass === "rodeo2026" || hashIngresado === hashCorrecto) {
+                if (inputPass === "rodeo2026") {
+                    prompt("Este es el hash real de tu contraseña. Cópialo y pégalo en la variable 'hashCorrecto' de tu código:", hashIngresado);
+                }
                 document.getElementById('loginScreen').style.display = "none";
                 document.getElementById('adminDashboard').style.display = "block";
                 iniciarBaseDeDatos();
-            } else { alert("Contraseña incorrecta"); }
+            } else { 
+                alert("Contraseña incorrecta"); 
+            }
         };
 
         function iniciarBaseDeDatos() {
