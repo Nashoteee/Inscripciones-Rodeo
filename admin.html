@@ -94,25 +94,21 @@
         async function sha256(m) { const buf = await crypto.subtle.digest('SHA-256', new TextEncoder().encode(m)); return Array.from(new Uint8Array(buf)).map(b => b.toString(16).padStart(2, '0')).join(''); }
 
 window.verificarPassword = async function() {
-            const inputPass = document.getElementById('passInput').value;
-            const hashIngresado = await sha256(inputPass);
-            
-            // Reemplazaremos este valor vacío con el hash real que te dé el sistema
-            const hashCorrecto = "AQUI_IRÁ_EL_NUEVO_HASH";
+    const inputPass = document.getElementById('passInput').value;
+    const hashIngresado = await sha256(inputPass);
+    const hashCorrecto = "4396a8435d679693cf8419615a6b0c6114a87e51c8908f02844111394a10738e";
 
-            // Truco temporal: Te deja entrar con la clave normal y te muestra el hash real
-            if(inputPass === "rodeo2026" || hashIngresado === hashCorrecto) {
-                if (inputPass === "rodeo2026") {
-                    prompt("Este es el hash real de tu contraseña. Cópialo y pégalo en la variable 'hashCorrecto' de tu código:", hashIngresado);
-                }
-                document.getElementById('loginScreen').style.display = "none";
-                document.getElementById('adminDashboard').style.display = "block";
-                iniciarBaseDeDatos();
-            } else { 
-                alert("Contraseña incorrecta"); 
-            }
-        };
+    // Aquí agregamos la validación condicional
+    if (hashIngresado === hashCorrecto) {
+        document.getElementById('loginScreen').style.display = "none";
+        document.getElementById('adminDashboard').style.display = "block";
+        iniciarBaseDeDatos();
+    } else {
+        alert("Contraseña incorrecta");
+    }
+};
 
+        
         function iniciarBaseDeDatos() {
             onSnapshot(collection(db, "rodeos"), (s) => {
                 const fR = document.getElementById('filtroRodeoContadores'), sR = document.getElementById('rodeoParaSerie');
