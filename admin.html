@@ -97,14 +97,11 @@
             return Array.from(new Uint8Array(buf)).map(b => b.toString(16).padStart(2, '0')).join(''); 
         }
 
-        window.verificarPassword = async function() {
+        window.verificarPassword = function() {
             const inputPass = document.getElementById('passInput').value;
-            const hashIngresado = await sha256(inputPass);
             
-            // Hash correspondiente a la contraseña: admin2026
-            const hashCorrecto = "be46db70f624d123856f10d01c385cd30a823d7177af4d3995f57e27afb27236";
-
-            if (hashIngresado === hashCorrecto) {
+            // Contraseña directa
+            if (inputPass === "rodeo2026") {
                 document.getElementById('loginScreen').style.display = "none";
                 document.getElementById('adminDashboard').style.display = "block";
                 iniciarBaseDeDatos();
