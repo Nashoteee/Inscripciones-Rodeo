@@ -166,6 +166,14 @@
         let seriesGlobales = [];
         window.seriesCerrando = {}; 
 
+        async function sha256(message) {
+            const msgBuffer = new TextEncoder().encode(message);
+            const hashBuffer = await crypto.subtle.digest('SHA-256', msgBuffer);
+            const hashArray = Array.from(new Uint8Array(hashBuffer));
+            return hashArray.map(b => b.toString(16).padStart(2, '0')).join('');
+        }
+        window.sha256 = sha256; // Esto es lo que permite que el botón la encuentre
+                
         window.verificarPassword = async function() {
             const inputPass = document.getElementById('passInput').value;
             const hashIngresado = await sha256(inputPass);
