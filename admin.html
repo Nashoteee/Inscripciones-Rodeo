@@ -87,28 +87,32 @@
         import { getFirestore, collection, onSnapshot, updateDoc, deleteDoc, doc, addDoc } from "https://www.gstatic.com/firebasejs/10.12.2/firebase-firestore.js";
 
         const firebaseConfig = { apiKey: "AIzaSyCqtSOu4YemJGUb9dRG_7IDZZBL4E3yNsM", authDomain: "inscripciones-rodeos-909bb.firebaseapp.com", projectId: "inscripciones-rodeos-909bb", storageBucket: "inscripciones-rodeos-909bb.firebasestorage.app", messagingSenderId: "541411909779", appId: "1:541411909779:web:4cae02b122a4ac8928ad66" };
-        const app = initializeApp(firebaseConfig); const db = getFirestore(app);
+        const app = initializeApp(firebaseConfig); 
+        const db = getFirestore(app);
         
         let inscripcionesGlobales = [], seriesGlobales = [];
 
-        async function sha256(m) { const buf = await crypto.subtle.digest('SHA-256', new TextEncoder().encode(m)); return Array.from(new Uint8Array(buf)).map(b => b.toString(16).padStart(2, '0')).join(''); }
+        async function sha256(m) { 
+            const buf = await crypto.subtle.digest('SHA-256', new TextEncoder().encode(m)); 
+            return Array.from(new Uint8Array(buf)).map(b => b.toString(16).padStart(2, '0')).join(''); 
+        }
 
-window.verificarPassword = async function() {
-    const inputPass = document.getElementById('passInput').value;
-    const hashIngresado = await sha256(inputPass);
-    const hashCorrecto = "be46db70f624d123856f10d01c385cd30a823d7177af4d3995f57e27afb27236";
+        window.verificarPassword = async function() {
+            const inputPass = document.getElementById('passInput').value;
+            const hashIngresado = await sha256(inputPass);
+            
+            // Hash correspondiente a la contraseña: admin2026
+            const hashCorrecto = "033bd95d733076166f076e03a98565b93d3b7e7c81d3f540b616a19f2a0df8d1";
 
-    // Aquí agregamos la validación condicional
-    if (hashIngresado === hashCorrecto) {
-        document.getElementById('loginScreen').style.display = "none";
-        document.getElementById('adminDashboard').style.display = "block";
-        iniciarBaseDeDatos();
-    } else {
-        alert("Contraseña incorrecta");
-    }
-};
+            if (hashIngresado === hashCorrecto) {
+                document.getElementById('loginScreen').style.display = "none";
+                document.getElementById('adminDashboard').style.display = "block";
+                iniciarBaseDeDatos();
+            } else {
+                alert("Contraseña incorrecta");
+            }
+        };
 
-        
         function iniciarBaseDeDatos() {
             onSnapshot(collection(db, "rodeos"), (s) => {
                 const fR = document.getElementById('filtroRodeoContadores'), sR = document.getElementById('rodeoParaSerie');
