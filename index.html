@@ -123,15 +123,69 @@
             document.getElementById('mensajeCerrado').style.display = snapshot.empty ? "block" : "none";
         });
 
-        document.getElementById('rodeo').addEventListener('change', (e) => {
-            const v = e.target.value, sS = document.getElementById('serie');
-            if(unsubscribeSeries) unsubscribeSeries();
-            if(!v) { sS.innerHTML = '<option value="">Primero seleccione Rodeo...</option>'; sS.disabled=true; return; }
-            sS.disabled=false;
-            unsubscribeSeries = onSnapshot(query(collection(db, "series"), where("estado", "==", "abierto"), where("rodeoNombre", "==", v)), (snap) => {
-                sS.innerHTML = snap.empty ? '<option value="">No hay series abiertas</option>' : '<option value="">Seleccione Serie...</option>';
-                snap.forEach(d => sS.innerHTML += `<option value="${d.data().nombre}" data-cierre="${d.data().fechaCierre}" data-id="${d.id}">${d.data().nombre}</option>`);
-            });
+        document.getElementById('registroForm').addEventListener('submit', async function(e) {
+            e.preventDefault();
+            let r1 = document.getElementById('rut1').value.trim(), r2 = document.getElementById('rut2').value.trim();
+            if(!validarRutChileno(r1) || !validarRutChileno(r2)) return alert("RUT inválido.");
+            if(r1===r2) return alert("Error: RUT duplicado en la misma collera.");
+            
+            const btn = document.getElementById('btnRegistrar'); 
+            btn.disabled = true; 
+            btn.innerText = "Subiendo comprobante...";
+        
+            try {
+                const inputComprobante = document.getElementById('comprobante');
+                if (inputComprobante.files.length === 0) {
+                    throw new Error("Debe seleccionar un comprobante de pago.");
+                }
+        
+                const formDataImg = new FormData();
+                formDataImg.append("image", inputComprobante.files[0]);
+        
+                const res = await fetch(`https://api.imgbb.com/1/upload?key=2f84ad94ca28ab56dceb42ea0a3fa7cc`, { 
+                    method: "POST", 
+                    body: formDataImg 
+                });
+                
+                const json = await res.json();
+                
+                if (!json.success) {
+                    throw new Error(json.error?.message || "Error al subir la imagen a ImgBB.");
+                }
+        
+                btn.innerText = "Registrando collera...";
+        
+                await addDoc(collection(db, "inscripciones"), {
+                    rodeo: document.getElementById('rodeo').value, 
+                    serie: document.getElementById('serie').value,
+                    comprobanteUrl: json.data.url, 
+                    estadoPago: "pendiente", 
+                    fecha: Date.now(), 
+                    estado: "activo",
+                    jinete1: document.getElementById('nombre1').value.toUpperCase(), 
+                    rut1: r1, 
+                    caballo1: document.getElementById('caballo1').value.toUpperCase(), 
+                    nroCaballo1: document.getElementById('nroCaballo1').value, 
+                    club1: document.getElementById('club1').value.toUpperCase(), 
+                    telefono1: document.getElementById('telefono1').value, 
+                    criadero1: document.getElementById('criadero1').value.toUpperCase() || "SIN CRIADERO",
+                    jinete2: document.getElementById('nombre2').value.toUpperCase(), 
+                    rut2: r2, 
+                    caballo2: document.getElementById('caballo2').value.toUpperCase(), 
+                    nroCaballo2: document.getElementById('nroCaballo2').value, 
+                    club2: document.getElementById('club2').value.toUpperCase(), 
+                    telefono2: document.getElementById('telefono2').value, 
+                    criadero2: document.getElementById('criadero2').value.toUpperCase() || "SIN CRIADERO"
+                });
+                
+                alert("¡Collera inscrita exitosamente!"); 
+                location.reload();
+                
+            } catch(err) {
+                alert("Error: " + err.message); 
+                btn.disabled = false; 
+                btn.innerText = "Subir y Registrar Collera Completa"; 
+            }
         });
 
         document.getElementById('serie').addEventListener('change', () => {
