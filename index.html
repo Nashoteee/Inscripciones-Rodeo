@@ -188,7 +188,7 @@
 
         document.getElementById('serie').addEventListener('change', () => {
             clearInterval(cronometroInterval);
-            const opt = document.getElementById('serie').options[document.getElementById('serie').selectedIndex];
+            const opt = document.getElementById('serie').options[document.getElementById('serie'].selectedIndex];
             const cierre = opt.getAttribute('data-cierre');
             const timer = document.getElementById('tiempoRestante');
             if(cierre && cierre !== "undefined") {
@@ -214,9 +214,26 @@
 
         document.getElementById('registroForm').addEventListener('submit', async function(e) {
             e.preventDefault();
-            let r1 = document.getElementById('rut1').value.trim(), r2 = document.getElementById('rut2').value.trim();
+            let r1 = document.getElementById('rut1').value.trim();
+            let r2 = document.getElementById('rut2').value.trim();
+            let rodeoSeleccionado = document.getElementById('rodeo').value;
+            let serieSeleccionada = document.getElementById('serie').value;
+
             if(!validarRutChileno(r1) || !validarRutChileno(r2)) return alert("RUT inválido.");
             if(r1 === r2) return alert("Error: RUT duplicado en la misma collera.");
+
+            // Validar si alguno de los jinetes ya está inscrito en la misma serie y rodeo
+            let yaInscrito = historialInscripcionesCache.some(ins => {
+                if (ins.rodeo === rodeoSeleccionado && ins.serie === serieSeleccionada) {
+                    return (ins.rut1 === r1 || ins.rut2 === r1 || ins.rut1 === r2 || ins.rut2 === r2);
+                }
+                return false;
+            });
+
+            if (yaInscrito) {
+                alert("⚠️ Atención: Al menos uno de los jinetes ya se encuentra inscrito en esta misma serie para este rodeo.");
+                return;
+            }
             
             const btn = document.getElementById('btnRegistrar'); 
             btn.disabled = true; 
@@ -245,8 +262,8 @@
                 btn.innerText = "Registrando collera...";
 
                 await addDoc(collection(db, "inscripciones"), {
-                    rodeo: document.getElementById('rodeo').value, 
-                    serie: document.getElementById('serie').value,
+                    rodeo: rodeoSeleccionado, 
+                    serie: serieSeleccionada,
                     comprobanteUrl: json.data.url, 
                     estadoPago: "pendiente", 
                     fecha: Date.now(), 
@@ -277,7 +294,6 @@
             }
         });
 
-        // Lógica completa para consultar el estado de inscripción
         window.consultarEstado = async function() {
             const rut = document.getElementById('rutConsulta').value.trim();
             const rodeoFiltro = document.getElementById('filtroConsultaRodeo').value;
@@ -303,7 +319,6 @@
 
                 querySnapshot.forEach((doc) => {
                     const data = doc.data();
-                    // Coincide si el RUT ingresado es el jinete 1 o el jinete 2
                     const coincideRut = (data.rut1 === rut || data.rut2 === rut);
                     const coincideRodeo = (rodeoFiltro === "TODOS" || data.rodeo === rodeoFiltro);
 
