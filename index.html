@@ -23,7 +23,7 @@
         #tiempoRestante { display: none; color: #d35400; font-weight: bold; margin-top: 10px; font-family: monospace; font-size: 1.2em; background: #ffeaa7; padding: 8px; border-radius: 4px; text-align: center; border: 1px solid #f1c40f; }
         .alerta-pago { background-color: #e8f8f5; border: 1px solid #a3e4d7; padding: 15px; border-radius: 6px; margin-top: 20px; }
         .seccion-consulta { background: #eaf2f8; border: 1px solid #a4b0be; padding: 15px; border-radius: 6px; margin-bottom: 25px; }
-        .resultado-estado { margin-top: 15px; padding: 15px; border-radius: 6px; display: none; font-weight: bold; text-align: center; }
+        .resultado-estado { margin-top: 15px; padding: 15px; border-radius: 6px; display: none; font-weight: normal; text-align: left; font-size: 14px; background: #fff; border: 1px solid #ccc; }
         .auto-fill-hint { font-size: 11px; color: #2980b9; margin-top: 2px; display: block; font-style: italic; }
     </style>
 </head>
@@ -87,7 +87,7 @@
 
     <script type="module">
         import { initializeApp } from "https://www.gstatic.com/firebasejs/10.12.2/firebase-app.js";
-        import { getFirestore, collection, addDoc, onSnapshot, query, where, getDocs, doc } from "https://www.gstatic.com/firebasejs/10.12.2/firebase-firestore.js";
+        import { getFirestore, collection, addDoc, onSnapshot, query, where, getDocs } from "https://www.gstatic.com/firebasejs/10.12.2/firebase-firestore.js";
         
         const firebaseConfig = { apiKey: "AIzaSyCqtSOu4YemJGUb9dRG_7IDZZBL4E3yNsM", authDomain: "inscripciones-rodeos-909bb.firebaseapp.com", projectId: "inscripciones-rodeos-909bb", storageBucket: "inscripciones-rodeos-909bb.firebasestorage.app", messagingSenderId: "541411909779", appId: "1:541411909779:web:4cae02b122a4ac8928ad66" };
         const app = initializeApp(firebaseConfig); 
@@ -277,11 +277,73 @@
             }
         });
 
-        window.consultarEstado = async function() { /* (Tu lógica de consulta original) */ };
-    </script>
-</body>
-</html>
-        window.consultarEstado = async function() { /* (Tu lógica de consulta original) */ };
+        // Lógica completa para consultar el estado de inscripción
+        window.consultarEstado = async function() {
+            const rut = document.getElementById('rutConsulta').value.trim();
+            const rodeoFiltro = document.getElementById('filtroConsultaRodeo').value;
+            const contenedorResultado = document.getElementById('resultadoEstado');
+
+            if (!rut) {
+                contenedorResultado.style.display = "block";
+                contenedorResultado.style.background = "#f8d7da";
+                contenedorResultado.style.color = "#721c24";
+                contenedorResultado.innerHTML = "❌ Por favor, ingrese un RUT para consultar.";
+                return;
+            }
+
+            contenedorResultado.style.display = "block";
+            contenedorResultado.style.background = "#eaf2f8";
+            contenedorResultado.style.color = "#333";
+            contenedorResultado.innerHTML = "🔍 Buscando inscripciones...";
+
+            try {
+                let q = query(collection(db, "inscripciones"));
+                const querySnapshot = await getDocs(q);
+                let encontradas = [];
+
+                querySnapshot.forEach((doc) => {
+                    const data = doc.data();
+                    // Coincide si el RUT ingresado es el jinete 1 o el jinete 2
+                    const coincideRut = (data.rut1 === rut || data.rut2 === rut);
+                    const coincideRodeo = (rodeoFiltro === "TODOS" || data.rodeo === rodeoFiltro);
+
+                    if (coincideRut && coincideRodeo) {
+                        encontradas.push(data);
+                    }
+                });
+
+                if (encontradas.length === 0) {
+                    contenedorResultado.style.background = "#f8d7da";
+                    contenedorResultado.style.color = "#721c24";
+                    contenedorResultado.innerHTML = "❌ No se encontraron inscripciones registradas para este RUT con los filtros seleccionados.";
+                    return;
+                }
+
+                let html = `<strong>✅ Se encontraron ${encontradas.length} inscripción(es):</strong><br><br>`;
+                encontradas.forEach((ins, index) => {
+                    let estadoPagoColor = ins.estadoPago === 'aprobado' ? 'green' : 'orange';
+                    html += `
+                        <div style="border-bottom: 1px solid #ddd; padding-bottom: 10px; margin-bottom: 10px;">
+                            <strong>#${index + 1} - Rodeo:</strong> ${ins.rodeo} <br>
+                            <strong>Serie:</strong> ${ins.serie} <br>
+                            <strong>1° Jinete:</strong> ${ins.jinete1} (${ins.rut1}) - ${ins.caballo1} <br>
+                            <strong>2° Jinete:</strong> ${ins.jinete2} (${ins.rut2}) - ${ins.caballo2} <br>
+                            <strong>Estado de Pago:</strong> <span style="color: ${estadoPagoColor}; text-transform: uppercase; font-weight: bold;">${ins.estadoPago}</span>
+                        </div>
+                    `;
+                });
+
+                contenedorResultado.style.background = "#d4edda";
+                contenedorResultado.style.color = "#155724";
+                contenedorResultado.innerHTML = html;
+
+            } catch (error) {
+                console.error("Error al consultar:", error);
+                contenedorResultado.style.background = "#f8d7da";
+                contenedorResultado.style.color = "#721c24";
+                contenedorResultado.innerHTML = "❌ Ocurrió un error al realizar la consulta. Intente nuevamente.";
+            }
+        };
     </script>
 </body>
 </html>
