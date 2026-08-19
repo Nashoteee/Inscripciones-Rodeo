@@ -227,7 +227,7 @@
             btn.innerText = "Verificando disponibilidad...";
 
             try {
-                // Validación estricta consultando directamente las inscripciones de esa serie y rodeo
+                // Consultar inscripciones existentes para esta serie y rodeo
                 const qInscritas = query(
                     collection(db, "inscripciones"), 
                     where("rodeo", "==", rodeoSeleccionado), 
@@ -236,20 +236,33 @@
                 );
                 const querySnapshot = await getDocs(qInscritas);
                 
-                let jineteDuplicado = null;
+                let jinete1Inscrito = false;
+                let jinete2Inscrito = false;
+
                 querySnapshot.forEach((doc) => {
                     const data = doc.data();
-                    // Comprueba si alguno de los RUTs ingresados ya está registrado en esta serie exacta
+                    // Verificar si el RUT 1 ya está en esta serie (como jinete1 o jinete2 en otra collera)
                     if (data.rut1 === r1 || data.rut2 === r1) {
-                        jineteDuplicado = data.jinete1 === (document.getElementById('nombre1').value.toUpperCase()) ? r1 : r1;
+                        jinete1Inscrito = true;
                     }
+                    // Verificar si el RUT 2 ya está en esta serie
                     if (data.rut1 === r2 || data.rut2 === r2) {
-                        jineteDuplicado = r2;
+                        jinete2Inscrito = true;
                     }
                 });
 
-                if (jineteDuplicado) {
-                    alert(`⚠️ Atención: Uno de los jinetes con RUT ${jineteDuplicado} ya se encuentra inscrito en esta serie (${serieSeleccionada}) para este rodeo.`);
+                // Si alguno de los dos (o ambos) ya está inscrito, armar advertencia detallada
+                if (jinete1Inscrito || jinete2Inscrito) {
+                    let mensaje = "⚠️ Atención:\n";
+                    if (jinete1Inscrito && jinete2Inscrito) {
+                        mensaje += `- El Primer Jinete (${r1}) y el Segundo Jinete (${r2}) ya se encuentran inscritos en esta serie (${serieSeleccionada}).`;
+                    } else if (jinete1Inscrito) {
+                        mensaje += `- El Primer Jinete (${r1}) ya se encuentra inscrito en esta serie (${serieSeleccionada}).`;
+                    } else {
+                        mensaje += `- El Segundo Jinete (${r2}) ya se encuentra inscrito en esta serie (${serieSeleccionada}).`;
+                    }
+                    
+                    alert(mensaje);
                     btn.disabled = false;
                     btn.innerText = "Subir y Registrar Collera Completa";
                     return;
