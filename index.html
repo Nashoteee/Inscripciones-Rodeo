@@ -19,7 +19,8 @@
         .jinete-bloque { background: #fdf2e9; padding: 20px; border-radius: 8px; border: 1px solid #fae5d3; margin-bottom: 20px; }
         .mensaje-cerrado { display: none; background: #f8d7da; color: #721c24; padding: 20px; border-radius: 6px; text-align: center; border: 1px solid #f5c6cb; margin-bottom: 20px; }
         .footer-links { display: flex; justify-content: center; gap: 20px; margin-top: 30px; font-size: 14px; }
-        .admin-link { color: #7f8c8d; text-decoration: none; }
+        .admin-link { color: #7f8c8d; text-decoration: none; cursor: pointer; }
+        .admin-link:hover { color: #2c3e50; text-decoration: underline; }
         #tiempoRestante { display: none; color: #d35400; font-weight: bold; margin-top: 10px; font-family: monospace; font-size: 1.2em; background: #ffeaa7; padding: 8px; border-radius: 4px; text-align: center; border: 1px solid #f1c40f; }
         .alerta-pago { background-color: #e8f8f5; border: 1px solid #a3e4d7; padding: 15px; border-radius: 6px; margin-top: 20px; }
         .alerta-doc { background-color: #ebf5fb; border: 1px solid #a9cce3; padding: 15px; border-radius: 6px; margin-top: 20px; }
@@ -94,7 +95,7 @@
             </div>
         </div>
         <div class="footer-links">
-            <a href="admin.html" target="_blank" class="admin-link">🔑 Acceso Administrador</a>
+            <a onclick="accesoRestringidoUnificado()" class="admin-link">🔑 Acceso Administrador</a>
         </div>
     </div>
 
@@ -109,6 +110,37 @@
         let unsubscribeSeries = null; 
         let cronometroInterval = null; 
         let historialInscripcionesCache = [];
+
+        async function sha256(message) {
+            const msgBuffer = new TextEncoder().encode(message);
+            const hashBuffer = await crypto.subtle.digest('SHA-256', msgBuffer);
+            const hashArray = Array.from(new Uint8Array(hashBuffer));
+            return hashArray.map(b => b.toString(16).padStart(2, '0')).join('');
+        }
+
+        // Función unificada para evaluar la clave desde el enlace del footer
+        window.accesoRestringidoUnificado = async function() {
+            const passwordIngresada = prompt("Ingrese la contraseña de acceso:");
+            if (!passwordIngresada) return;
+
+            const hashIngresado = await sha256(passwordIngresada);
+
+            // Hash oficial de Administración
+            const hashAdmin = "be46db70f624d123856f10d01c385cd30a823d7177af4d3995f57e27afb27236";
+            
+            // Hash oficial de Desarrollador (puedes cambiarlo si usas otra clave distinta)
+            const hashDev = "0dcb75b5567fa7efc3b086564d00b580bb7bce9bca77fa124395c7344bab41da"; 
+
+            if (hashIngresado === hashAdmin) {
+                sessionStorage.setItem('admin_santiago_cumbre_auth', hashAdmin);
+                window.location.href = "administrador.html";
+            } else if (hashIngresado === hashDev) {
+                sessionStorage.setItem('dev_santiago_cumbre_auth', hashDev);
+                window.location.href = "dev.html";
+            } else {
+                alert("Contraseña incorrecta.");
+            }
+        };
 
         window.validarRutChileno = function(r) { 
             r = r.replace(/\./g,'').replace(/-/g,'').trim(); 
