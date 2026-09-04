@@ -50,7 +50,7 @@
         <div class="card">
             <h3>🔗 Rescate Profundo de Series y Colleras Huérfanas</h3>
             <div class="alerta-info">
-                💡 Esta herramienta escanea la base de datos en busca de <strong>Series</strong> (sin rodeo válido) e <strong>Inscripciones/Colleras</strong> (cuyo rodeo o serie ya no existen). Permite recrear el rodeo original mediante el menú desplegable o reasignar los registros de forma segura.
+                💡 Esta herramienta escanea la base de datos en busca de <strong>Series</strong> (sin rodeo válido) e <strong>Inscripciones/Colleras</strong> (cuyo rodeo o serie ya no existen). Permite recrear el rodeo original, reasignar los registros o eliminarlos definitivamente.
             </div>
             
             <button onclick="buscarHuerfanos()" style="background-color: #2980b9; width: auto; padding: 8px 15px;">🔍 Escanear Base de Datos (Series y Colleras)</button>
@@ -70,7 +70,7 @@
 
     <script type="module">
         import { initializeApp } from "https://www.gstatic.com/firebasejs/10.12.2/firebase-app.js";
-        import { getFirestore, collection, getDocs, updateDoc, addDoc, doc } from "https://www.gstatic.com/firebasejs/10.12.2/firebase-firestore.js";
+        import { getFirestore, collection, getDocs, updateDoc, addDoc, deleteDoc, doc } from "https://www.gstatic.com/firebasejs/10.12.2/firebase-firestore.js";
 
         const firebaseConfig = {
           apiKey: "AIzaSyCqtSOu4YemJGUb9dRG_7IDZZBL4E3yNsM",
@@ -86,7 +86,7 @@
 
         window.addEventListener('DOMContentLoaded', () => {
             const sesionDevActiva = sessionStorage.getItem('dev_santiago_cumbre_auth');
-            const hashDevEsperado = "7691a81c8ebd9e37886813fae57afd0bea83e1d218fb89b1ea8cc90326772322";
+            const hashDevEsperado = "be46db70f624d123856f10d01c385cd30a823d7177af4d3995f57e27afb27236";
 
             if (sesionDevActiva === hashDevEsperado) {
                 document.getElementById('devDashboard').style.display = "block";
@@ -137,7 +137,6 @@
                     let collera = d.data();
                     collera.id = d.id;
 
-                    // Una collera es huérfana si su rodeo no existe o si su serie no pertenece a ese rodeo / no existe
                     let rodeoExiste = listaRodeos.some(r => r.nombre === collera.rodeo);
                     let serieExiste = listaSeries.some(s => s.nombre === collera.serie && s.rodeoNombre === collera.rodeo);
 
@@ -146,7 +145,6 @@
                     }
                 });
 
-                // Validar si todo está limpio
                 if (seriesHuerfanas.length === 0 && collerasHuerfanas.length === 0) {
                     contenedor.innerHTML = `<p style="color: #2ecc71;">✅ No se encontraron series ni colleras huérfanas. La integridad de la base de datos está perfecta.</p>`;
                     return;
@@ -186,13 +184,13 @@
                 // --- TABLA 2: COLLERAS / INSCRIPCIONES HUÉRFANAS ---
                 if (collerasHuerfanas.length > 0) {
                     html += `<p style="color: #e67e22; font-weight: bold; margin-top: 15px;">⚠️ Se encontraron ${collerasHuerfanas.length} collera(s) / inscripción(es) con referencias inválidas (Rodeo o Serie inexistentes):</p>`;
-                    html += `<table><thead><tr><th>Datos de la Collera</th><th>Rodeo y Serie Actuales</th><th>Reasignar a Rodeo / Serie Válidos</th><th>Acción</th></tr></thead><tbody>`;
+                    html += `<table><thead><tr><th>Datos de la Collera</th><th>Rodeo y Serie Actuales</th><th>Reasignar a Rodeo / Serie Válidos</th><th>Acciones</th></tr></thead><tbody>`;
 
                     collerasHuerfanas.forEach(c => {
                         let selectRodeoId = `select_collera_rodeo_${c.id}`;
                         let selectSerieId = `select_collera_serie_${c.id}`;
                         
-                        let infoCollera = `<strong>1°:</strong> ${c.jinete1 || '-'} | <strong>2°:</strong> ${c.jinete2 || '-'}`;
+                        let infoCollera = `<strong>1°:</strong> ${c.jinete1 || '-'} (${c.rut1 || '-'})<br><strong>2°:</strong> ${c.jinete2 || '-'} (${c.rut2 || '-'})`;
 
                         html += `<tr>
                             <td>${infoCollera}</td>
@@ -212,13 +210,16 @@
                                     <option value="">-- Primero seleccione Rodeo --</option>
                                 </select>
                             </td>
-                            <td><button onclick="procesarRescateCollera('${c.id}', '${selectRodeoId}', '${selectSerieId}')" style="padding: 6px 12px; margin: 0; background: #2980b9;">Reasignar Collera</button></td>
+                            <td>
+                                <button onclick="procesarRescateCollera('${c.id}', '${selectRodeoId}', '${selectSerieId}')" style="padding: 6px 12px; margin-bottom: 6px; background: #2980b9;">Reasignar</button>
+                                <button onclick="eliminarColleraHuerfana('${c.id}')" style="padding: 6px 12px; margin: 0; background: #c0392b;">🗑️ Eliminar</button>
+                            </td>
                         </tr>`;
                     });
                     html += `</tbody></table>`;
                 }
 
-                window.listaSeriesGlobal = listaSeries; // Guardar temporalmente para los selects dinámicos de colleras
+                window.listaSeriesGlobal = listaSeries;
                 contenedor.innerHTML = html;
 
             } catch (err) {
@@ -226,7 +227,6 @@
             }
         };
 
-        // Función auxiliar para actualizar las series disponibles según el rodeo seleccionado en una collera huérfana
         window.actualizarSeriesDisponibles = function(colleraId) {
             const selectRodeo = document.getElementById(`select_collera_rodeo_${colleraId}`);
             const selectSerie = document.getElementById(`select_collera_serie_${colleraId}`);
@@ -247,7 +247,6 @@
             });
         };
 
-        // Procesar rescate de serie
         window.procesarRescateSerie = async function(idSerie, selectId, nombreRodeoOriginal) {
             const valorSeleccionado = document.getElementById(selectId).value;
             if (!valorSeleccionado) {
@@ -282,7 +281,6 @@
             }
         };
 
-        // Procesar rescate de collera
         window.procesarRescateCollera = async function(idCollera, selectRodeoId, selectSerieId) {
             const nuevoRodeo = document.getElementById(selectRodeoId).value;
             const nuevaSerie = document.getElementById(selectSerieId).value;
@@ -303,6 +301,19 @@
                 window.buscarHuerfanos();
             } catch (err) {
                 alert("Error al actualizar la collera: " + err.message);
+            }
+        };
+
+        // Función para eliminar definitivamente una collera huérfana
+        window.eliminarColleraHuerfana = async function(idCollera) {
+            if (!confirm("⚠️ ¿Está completamente seguro de eliminar permanentemente esta collera huérfana de la base de datos? Esta acción no se puede deshacer.")) return;
+
+            try {
+                await deleteDoc(doc(db, "inscripciones", idCollera));
+                alert("Collera eliminada exitosamente.");
+                window.buscarHuerfanos(); // Actualizar la lista
+            } catch (err) {
+                alert("Error al eliminar la collera: " + err.message);
             }
         };
 
