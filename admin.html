@@ -51,7 +51,7 @@
         th, td { border: 1px solid #ddd; padding: 10px; text-align: left; vertical-align: top;}
         th { background-color: #f4f4f4; color: #333;}
         .meta-info { font-size: 12px; color: #7f8c8d; display: block;}
-        .acciones-col { width: 130px; }
+        .acciones-col { width: 150px; }
 
         .grid-contadores { display: grid; grid-template-columns: repeat(auto-fill, minmax(260px, 1fr)); gap: 15px; margin-top: 15px; }
         .card-serie-contador { background: #f8f9fa; border: 1px solid #cbd5e1; border-radius: 6px; padding: 15px; border-left: 5px solid #2980b9; }
@@ -111,7 +111,7 @@
                         <input type="checkbox" id="reqFmaSerie" style="width: 16px; height: 16px; margin: 0;"> Exigir Documento FMA
                     </label>
                     <label style="display: flex; align-items: center; gap: 8px; font-size: 13px; font-weight: normal; cursor: pointer; margin: 0;">
-                        <input type="checkbox" id="reqVacunasSerie" style="width: 16px; height: 16px; margin: 0;"> Exigir Certificado de Vacunas
+                        <input type="checkbox" id="reqVacunasSerie" style="width: 16px; height: 16px; margin: 0;"> Exigir Certificados de Vacunas (Múltiples)
                     </label>
                 </div>
 
@@ -256,7 +256,7 @@
 
                     let reqsTxt = [];
                     if(data.pideFma) reqsTxt.push("FMA");
-                    if(data.pideVacunas) reqsTxt.push("Vacunas");
+                    if(data.pideVacunas) reqsTxt.push("Vacunas (Múltiples)");
                     let badgeReqs = reqsTxt.length > 0 ? `<span style="background: #e2e8f0; color: #334155; font-size: 10px; padding: 2px 5px; border-radius: 3px; font-weight: bold;">Exige: ${reqsTxt.join(", ")}</span>` : `<span style="color: #94a3b8; font-size: 10px;">Sin requisitos extra</span>`;
 
                     contenedor.innerHTML += `
@@ -368,7 +368,17 @@
 
                 let botonPagoHTML = ins.comprobanteUrl ? `<a href="${ins.comprobanteUrl}" target="_blank" class="btn-pago">👁️ Ver Pago</a>` : '';
                 let botonFmaHTML = ins.fmaUrl && ins.fmaUrl !== "No requerido" ? `<a href="${ins.fmaUrl}" target="_blank" class="btn-pago" style="background:#2980b9; color:#fff;">📄 Ver FMA</a>` : '';
-                let botonVacunasHTML = ins.vacunasUrl && ins.vacunasUrl !== "No requerido" ? `<a href="${ins.vacunasUrl}" target="_blank" class="btn-pago" style="background:#8e44ad; color:#fff;">💉 Ver Vacunas</a>` : '';
+                
+                let botonVacunasHTML = '';
+                if (ins.vacunasUrls && Array.isArray(ins.vacunasUrls) && ins.vacunasUrls.length > 0 && ins.vacunasUrls[0] !== "No requerido") {
+                    botonVacunasHTML = `<div style="margin-top: 5px; font-size: 11px; font-weight: bold; color: #8e44ad;">💉 Vacunas (${ins.vacunasUrls.length}):</div>`;
+                    ins.vacunasUrls.forEach((url, idx) => {
+                        botonVacunasHTML += `<a href="${url}" target="_blank" class="btn-pago" style="background:#8e44ad; color:#fff; font-size:11px; padding:3px; margin-bottom:2px;">Ver Cert. #${idx + 1}</a>`;
+                    });
+                } else if (typeof ins.vacunasUrl === 'string' && ins.vacunasUrl !== "No requerido") {
+                    // Compatibilidad con registros antiguos de un solo archivo
+                    botonVacunasHTML = `<a href="${ins.vacunasUrl}" target="_blank" class="btn-pago" style="background:#8e44ad; color:#fff;">💉 Ver Vacunas</a>`;
+                }
 
                 tbody.innerHTML += `
                     <tr>
@@ -379,7 +389,7 @@
                             ${botonPagoHTML}
                             ${botonFmaHTML}
                             ${botonVacunasHTML}
-                            <button class="btn-aprobar" onclick="cambiarEstadoPago('${ins.id}', 'aprobado')">Aprobar</button>
+                            <button class="btn-aprobar" onclick="cambiarEstadoPago('${ins.id}', 'aprobado')" style="margin-top: 5px;">Aprobar</button>
                             <button class="btn-rechazar" onclick="cambiarEstadoPago('${ins.id}', 'rechazado')">Rechazar</button>
                             <button class="btn-eliminar" style="width:100%; margin-top:5px;" onclick="borrarPermanente('inscripciones', '${ins.id}', '¿Eliminar esta collera?')">🗑️ Borrar</button>
                         </td>
@@ -423,7 +433,7 @@
 
             if(!rodeo || !serie || !minutos) return alert("Completa todos los campos obligatorios de la serie.");
             
-            let mensajeConfirmacion = `¿Está seguro de crear la serie "${serie}" para el rodeo "${rodeo}"?\n\nConfiguración de Requisitos:\n- Documento FMA: ${reqFma ? 'OBLIGATORIO' : 'NO REQUERIDO'}\n- Certificado de Vacunas: ${reqVacunas ? 'OBLIGATORIO' : 'NO REQUERIDO'}`;
+            let mensajeConfirmacion = `¿Está seguro de crear la serie "${serie}" para el rodeo "${rodeo}"?\n\nConfiguración de Requisitos:\n- Documento FMA: ${reqFma ? 'OBLIGATORIO' : 'NO REQUERIDO'}\n- Certificados de Vacunas (Múltiples): ${reqVacunas ? 'OBLIGATORIO' : 'NO REQUERIDO'}`;
             if(!confirm(mensajeConfirmacion)) return;
             if(!confirm("⚠️ Segunda confirmación: ¿Confirma que los parámetros y requisitos seleccionados para esta serie son correctos?")) return;
 
@@ -497,6 +507,14 @@
 
                 let estadoPagoTexto = (ins.estadoPago || "pendiente").toUpperCase();
 
+                // Formatear lista de URLs de vacunas para Excel (separadas por coma)
+                let vacunasTextoExcel = "No requerido / N/A";
+                if (ins.vacunasUrls && Array.isArray(ins.vacunasUrls) && ins.vacunasUrls.length > 0 && ins.vacunasUrls[0] !== "No requerido") {
+                    vacunasTextoExcel = ins.vacunasUrls.join(", ");
+                } else if (typeof ins.vacunasUrl === 'string' && ins.vacunasUrl !== "No requerido") {
+                    vacunasTextoExcel = ins.vacunasUrl;
+                }
+
                 return {
                     "Rodeo": ins.rodeo || "-",
                     "Serie": nombreSerie,
@@ -517,7 +535,7 @@
                     "Criadero": criaderosUnidos || "-",
                     "Link Comprobante (ImgBB)": ins.comprobanteUrl || "-",
                     "Documento FMA": ins.fmaUrl || "No requerido / N/A",
-                    "Certificado Vacunas": ins.vacunasUrl || "No requerido / N/A"
+                    "Certificados Vacunas (Múltiples)": vacunasTextoExcel
                 };
             });
 
@@ -525,7 +543,7 @@
 
             XLSX.utils.sheet_add_aoa(ws, [
                 [],
-                ["AVISO LEGAL Y TÉCNICO: Los enlaces a los archivos adjuntos (Comprobante de pago, Certificado de Vacunas y Documento FMA) tienen carácter temporal con una vigencia limitada de una semana. La Asociación de Rodeo Santiago Cumbre y el desarrollo del sistema no se responsabilizan por la disponibilidad permanente de las imágenes en dichos enlaces externos una vez expirado el plazo operativo."]
+                ["AVISO LEGAL Y TÉCNICO: Los enlaces a los archivos adjuntos (Comprobante de pago, Certificados de Vacunas y Documento FMA) tienen carácter temporal con una vigencia limitada de una semana. La Asociación de Rodeo Santiago Cumbre y el desarrollo del sistema no se responsabilizan por la disponibilidad permanente de las imágenes en dichos enlaces externos una vez expirado el plazo operativo."]
             ], { origin: -1 });
 
             const range = XLSX.utils.decode_range(ws['!ref']);
