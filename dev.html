@@ -6,7 +6,7 @@
     <title>Consola de Desarrollo y Rescate - Asociación de Rodeo Santiago Cumbre</title>
     <style>
         body { font-family: 'Segoe UI', Tahoma, Geneva, Verdana, sans-serif; background-color: #1e272e; padding: 20px; color: #fff; margin: 0; }
-        .dev-dashboard { display: none; max-width: 1100px; margin: auto; padding-top: 10px; }
+        .dev-dashboard { display: none; max-width: 1200px; margin: auto; padding-top: 10px; }
         .header-dev { display: flex; justify-content: space-between; align-items: center; border-bottom: 2px solid #485460; padding-bottom: 15px; margin-bottom: 25px; flex-wrap: wrap; gap: 10px; }
         h1, h2 { color: #f1c40f; margin: 0; }
         .subtitulo-dev { color: #808e9b; font-weight: bold; text-transform: uppercase; font-size: 0.85em; letter-spacing: 1px; }
@@ -25,7 +25,7 @@
         .alerta-info { background: #353b48; border-left: 4px solid #f39c12; padding: 12px; margin-bottom: 15px; font-size: 13px; color: #dcdde1; }
         
         table { width: 100%; border-collapse: collapse; margin-top: 10px; font-size: 13px; background: #353b48; }
-        th, td { border: 1px solid #485460; padding: 8px; text-align: left; }
+        th, td { border: 1px solid #485460; padding: 8px; text-align: left; vertical-align: top; }
         th { background-color: #2f3640; color: #f1c40f; }
     </style>
 </head>
@@ -46,17 +46,17 @@
             <a href="admin.html" class="btn-regresar">⚙️ Ir al Administrador</a>
         </div>
 
-        <!-- Herramienta de Rescate de Registros Huérfanos -->
+        <!-- Herramienta Ampliada de Rescate de Series y Colleras Huérfanas -->
         <div class="card">
-            <h3>🔗 Rescate y Reasignación de Series Huérfanas</h3>
+            <h3>🔗 Rescate Profundo de Series y Colleras Huérfanas</h3>
             <div class="alerta-info">
-                💡 Esta herramienta detecta series que perdieron su vinculación con un rodeo activo. El menú desplegable incluye como primera opción la alternativa de <strong>volver a crear el rodeo original eliminado</strong>, o bien reasignarlas a cualquier otro rodeo existente.
+                💡 Esta herramienta escanea la base de datos en busca de <strong>Series</strong> (sin rodeo válido) e <strong>Inscripciones/Colleras</strong> (cuyo rodeo o serie ya no existen). Permite recrear el rodeo original mediante el menú desplegable o reasignar los registros de forma segura.
             </div>
             
-            <button onclick="buscarHuerfanos()" style="background-color: #2980b9; width: auto; padding: 8px 15px;">🔍 Buscar Elementos Huérfanos</button>
+            <button onclick="buscarHuerfanos()" style="background-color: #2980b9; width: auto; padding: 8px 15px;">🔍 Escanear Base de Datos (Series y Colleras)</button>
             
             <div id="contenedorHuerfanos" style="margin-top: 15px; overflow-x: auto;">
-                <p style="color: #a4b0be; font-style: italic;">Haga clic en el botón para escanear la base de datos en busca de anomalías estructurales.</p>
+                <p style="color: #a4b0be; font-style: italic;">Haga clic en el botón para iniciar el escaneo profundo.</p>
             </div>
         </div>
 
@@ -97,9 +97,10 @@
 
         window.buscarHuerfanos = async function() {
             const contenedor = document.getElementById('contenedorHuerfanos');
-            contenedor.innerHTML = "<p style='color: #f39c12;'>Escaneando colecciones en Firestore...</p>";
+            contenedor.innerHTML = "<p style='color: #f39c12;'>Escaneando colecciones en Firestore (Rodeos, Series e Inscripciones)...</p>";
 
             try {
+                // 1. Obtener Rodeos
                 const snapRodeos = await getDocs(collection(db, "rodeos"));
                 let listaRodeos = [];
                 snapRodeos.forEach(d => {
@@ -112,54 +113,112 @@
                     });
                 });
 
+                // 2. Obtener Series
                 const snapSeries = await getDocs(collection(db, "series"));
+                let listaSeries = [];
                 let seriesHuerfanas = [];
                 
                 snapSeries.forEach(d => {
                     let serie = d.data();
                     serie.id = d.id;
+                    listaSeries.push(serie);
+
                     let rodeoExiste = listaRodeos.some(r => r.nombre === serie.rodeoNombre);
                     if (!rodeoExiste) {
                         seriesHuerfanas.push(serie);
                     }
                 });
 
-                if (seriesHuerfanas.length === 0 && listaRodeos.length > 0) {
-                    contenedor.innerHTML = `<p style="color: #2ecc71;">✅ No se encontraron series huérfanas. La integridad de las relaciones está perfecta.</p>`;
-                    return;
-                }
+                // 3. Obtener Inscripciones / Colleras
+                const snapInscripciones = await getDocs(collection(db, "inscripciones"));
+                let collerasHuerfanas = [];
 
-                if (listaRodeos.length === 0 && seriesHuerfanas.length === 0) {
-                    contenedor.innerHTML = `<p style="color: #e74c3c;">⚠️ No hay rodeos ni series registradas en la base de datos.</p>`;
-                    return;
-                }
+                snapInscripciones.forEach(d => {
+                    let collera = d.data();
+                    collera.id = d.id;
 
-                let html = `<p style="color: #e67e22; font-weight: bold;">Se encontraron ${seriesHuerfanas.length} serie(s) sin un rodeo válido asociado:</p>`;
-                html += `<table><thead><tr><th>Nombre de Serie</th><th>Rodeo Faltante (Huérfano)</th><th>Seleccionar Opción de Rescate</th><th>Acción</th></tr></thead><tbody>`;
+                    // Una collera es huérfana si su rodeo no existe o si su serie no pertenece a ese rodeo / no existe
+                    let rodeoExiste = listaRodeos.some(r => r.nombre === collera.rodeo);
+                    let serieExiste = listaSeries.some(s => s.nombre === collera.serie && s.rodeoNombre === collera.rodeo);
 
-                seriesHuerfanas.forEach(s => {
-                    let selectId = `select_rodeo_${s.id}`;
-                    let nombreRodeoFaltante = s.rodeoNombre || 'Sin nombre';
-                    
-                    html += `<tr>
-                        <td><strong>${s.nombre}</strong></td>
-                        <td style="color: #e74c3c;">${nombreRodeoFaltante}</td>
-                        <td>
-                            <select id="${selectId}">
-                                <option value="">-- Seleccionar Destino --</option>
-                                <option value="__RECREAR__" style="color: #27ae60; font-weight: bold;">➕ [RECREAR] Volver a crear rodeo: "${nombreRodeoFaltante}"</option>`;
-                    
-                    listaRodeos.forEach(r => {
-                        html += `<option value="${r.nombre}">Asignar a: ${r.nombre} (Creado: ${r.fechaTexto})</option>`;
-                    });
-
-                    html += `</select>
-                        </td>
-                        <td><button onclick="procesarRescateSerie('${s.id}', '${selectId}', '${nombreRodeoFaltante.replace(/'/g, "\\'")}')" style="padding: 6px 12px; margin: 0; background: #27ae60;">Aplicar</button></td>
-                    </tr>`;
+                    if (!rodeoExiste || !serieExiste) {
+                        collerasHuerfanas.push(collera);
+                    }
                 });
 
-                html += `</tbody></table>`;
+                // Validar si todo está limpio
+                if (seriesHuerfanas.length === 0 && collerasHuerfanas.length === 0) {
+                    contenedor.innerHTML = `<p style="color: #2ecc71;">✅ No se encontraron series ni colleras huérfanas. La integridad de la base de datos está perfecta.</p>`;
+                    return;
+                }
+
+                let html = "";
+
+                // --- TABLA 1: SERIES HUÉRFANAS ---
+                if (seriesHuerfanas.length > 0) {
+                    html += `<p style="color: #e67e22; font-weight: bold; margin-top: 5px;">⚠️ Se encontraron ${seriesHuerfanas.length} serie(s) sin un rodeo válido asociado:</p>`;
+                    html += `<table><thead><tr><th>Nombre de Serie</th><th>Rodeo Faltante (Huérfano)</th><th>Seleccionar Opción de Rescate</th><th>Acción</th></tr></thead><tbody>`;
+
+                    seriesHuerfanas.forEach(s => {
+                        let selectId = `select_rodeo_serie_${s.id}`;
+                        let nombreRodeoFaltante = s.rodeoNombre || 'Sin nombre';
+                        
+                        html += `<tr>
+                            <td><strong>${s.nombre}</strong></td>
+                            <td style="color: #e74c3c;">${nombreRodeoFaltante}</td>
+                            <td>
+                                <select id="${selectId}">
+                                    <option value="">-- Seleccionar Destino --</option>
+                                    <option value="__RECREAR__" style="color: #27ae60; font-weight: bold;">➕ [RECREAR] Volver a crear rodeo: "${nombreRodeoFaltante}"</option>`;
+                        
+                        listaRodeos.forEach(r => {
+                            html += `<option value="${r.nombre}">Asignar a: ${r.nombre} (Creado: ${r.fechaTexto})</option>`;
+                        });
+
+                        html += `</select>
+                            </td>
+                            <td><button onclick="procesarRescateSerie('${s.id}', '${selectId}', '${nombreRodeoFaltante.replace(/'/g, "\\'")}')" style="padding: 6px 12px; margin: 0; background: #27ae60;">Aplicar</button></td>
+                        </tr>`;
+                    });
+                    html += `</tbody></table><br>`;
+                }
+
+                // --- TABLA 2: COLLERAS / INSCRIPCIONES HUÉRFANAS ---
+                if (collerasHuerfanas.length > 0) {
+                    html += `<p style="color: #e67e22; font-weight: bold; margin-top: 15px;">⚠️ Se encontraron ${collerasHuerfanas.length} collera(s) / inscripción(es) con referencias inválidas (Rodeo o Serie inexistentes):</p>`;
+                    html += `<table><thead><tr><th>Datos de la Collera</th><th>Rodeo y Serie Actuales</th><th>Reasignar a Rodeo / Serie Válidos</th><th>Acción</th></tr></thead><tbody>`;
+
+                    collerasHuerfanas.forEach(c => {
+                        let selectRodeoId = `select_collera_rodeo_${c.id}`;
+                        let selectSerieId = `select_collera_serie_${c.id}`;
+                        
+                        let infoCollera = `<strong>1°:</strong> ${c.jinete1 || '-'} | <strong>2°:</strong> ${c.jinete2 || '-'}`;
+
+                        html += `<tr>
+                            <td>${infoCollera}</td>
+                            <td style="color: #e74c3c;">Rodeo: ${c.rodeo || 'N/A'}<br>Serie: ${c.serie || 'N/A'}</td>
+                            <td>
+                                <div style="font-size: 11px; margin-bottom: 2px;">Nuevo Rodeo:</div>
+                                <select id="${selectRodeoId}" onchange="actualizarSeriesDisponibles('${c.id}')" style="margin-bottom: 6px;">
+                                    <option value="">-- Seleccionar Rodeo --</option>`;
+                        
+                        listaRodeos.forEach(r => {
+                            html += `<option value="${r.nombre}">${r.nombre}</option>`;
+                        });
+
+                        html += `</select>
+                                <div style="font-size: 11px; margin-bottom: 2px;">Nueva Serie:</div>
+                                <select id="${selectSerieId}">
+                                    <option value="">-- Primero seleccione Rodeo --</option>
+                                </select>
+                            </td>
+                            <td><button onclick="procesarRescateCollera('${c.id}', '${selectRodeoId}', '${selectSerieId}')" style="padding: 6px 12px; margin: 0; background: #2980b9;">Reasignar Collera</button></td>
+                        </tr>`;
+                    });
+                    html += `</tbody></table>`;
+                }
+
+                window.listaSeriesGlobal = listaSeries; // Guardar temporalmente para los selects dinámicos de colleras
                 contenedor.innerHTML = html;
 
             } catch (err) {
@@ -167,7 +226,28 @@
             }
         };
 
-        // Función inteligente que maneja la opción seleccionada en el desplegable
+        // Función auxiliar para actualizar las series disponibles según el rodeo seleccionado en una collera huérfana
+        window.actualizarSeriesDisponibles = function(colleraId) {
+            const selectRodeo = document.getElementById(`select_collera_rodeo_${colleraId}`);
+            const selectSerie = document.getElementById(`select_collera_serie_${colleraId}`);
+            const rodeoSeleccionado = selectRodeo.value;
+
+            selectSerie.innerHTML = '<option value="">-- Seleccionar Serie --</option>';
+
+            if (!rodeoSeleccionado) return;
+
+            const seriesDelRodeo = window.listaSeriesGlobal.filter(s => s.rodeoNombre === rodeoSeleccionado);
+            if (seriesDelRodeo.length === 0) {
+                selectSerie.innerHTML = '<option value="">⚠️ Este rodeo no tiene series registradas</option>';
+                return;
+            }
+
+            seriesDelRodeo.forEach(s => {
+                selectSerie.innerHTML += `<option value="${s.nombre}">${s.nombre}</option>`;
+            });
+        };
+
+        // Procesar rescate de serie
         window.procesarRescateSerie = async function(idSerie, selectId, nombreRodeoOriginal) {
             const valorSeleccionado = document.getElementById(selectId).value;
             if (!valorSeleccionado) {
@@ -179,7 +259,6 @@
                 if (valorSeleccionado === "__RECREAR__") {
                     if (!confirm(`¿Confirma volver a crear el rodeo "${nombreRodeoOriginal}" en la base de datos con estado abierto?`)) return;
                     
-                    // 1. Crear el rodeo eliminado
                     await addDoc(collection(db, "rodeos"), {
                         nombre: nombreRodeoOriginal,
                         estado: "abierto",
@@ -190,7 +269,6 @@
                 } else {
                     if (!confirm(`¿Confirma reasignar esta serie al rodeo existente "${valorSeleccionado}"?`)) return;
 
-                    // 2. Reasignar al rodeo seleccionado
                     await updateDoc(doc(db, "series", idSerie), {
                         rodeoNombre: valorSeleccionado
                     });
@@ -198,9 +276,33 @@
                     alert("¡Serie reasignada exitosamente!");
                 }
 
-                window.buscarHuerfanos(); // Actualizar la tabla
+                window.buscarHuerfanos();
             } catch (err) {
                 alert("Error al procesar la operación: " + err.message);
+            }
+        };
+
+        // Procesar rescate de collera
+        window.procesarRescateCollera = async function(idCollera, selectRodeoId, selectSerieId) {
+            const nuevoRodeo = document.getElementById(selectRodeoId).value;
+            const nuevaSerie = document.getElementById(selectSerieId).value;
+
+            if (!nuevoRodeo || !nuevaSerie) {
+                alert("Debe seleccionar tanto un rodeo válido como una serie de destino.");
+                return;
+            }
+
+            if (!confirm(`¿Confirma reasignar esta collera al Rodeo: "${nuevoRodeo}" / Serie: "${nuevaSerie}"?`)) return;
+
+            try {
+                await updateDoc(doc(db, "inscripciones", idCollera), {
+                    rodeo: nuevoRodeo,
+                    serie: nuevaSerie
+                });
+                alert("¡Collera reasignada exitosamente a la nueva ubicación!");
+                window.buscarHuerfanos();
+            } catch (err) {
+                alert("Error al actualizar la collera: " + err.message);
             }
         };
 
