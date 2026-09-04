@@ -550,7 +550,12 @@
                 for (let R = range.s.r; R <= range.e.r; ++R) {
                     const cellAddress = XLSX.utils.encode_cell({ r: R, c: C });
                     if (ws[cellAddress] && ws[cellAddress].v) {
-                        const cellLength = ws[cellAddress].v.toString().length;
+                        const valStr = ws[cellAddress].v.toString();
+                        
+                        // EVITA QUE EL AVISO LEGAL EXPANDA EL ANCHO DE LA COLUMNA
+                        if (valStr.includes("AVISO LEGAL")) continue;
+
+                        const cellLength = valStr.length;
                         if (cellLength > maxWidth) {
                             maxWidth = cellLength;
                         }
