@@ -127,7 +127,7 @@
             <div class="filtros-container">
                 <div style="flex: 1;">
                     <label style="font-size: 12px; font-weight: bold; color: #7f8c8d;">Filtrar por Rodeo:</label>
-                    <select id="filtroRodeoTabla" onchange="renderizarTabla()">
+                    <select id="filtroRodeoTabla" onchange="actualizarFiltroSeries(); renderizarTabla();">
                         <option value="TODOS">Todos los Rodeos</option>
                     </select>
                 </div>
@@ -239,18 +239,13 @@
 
             onSnapshot(collection(db, "series"), (snapshot) => {
                 const contenedor = document.getElementById('listaSeries');
-                const filtroSerieTabla = document.getElementById('filtroSerieTabla');
                 contenedor.innerHTML = '';
-                const seleccionSerieActual = filtroSerieTabla.value;
-                filtroSerieTabla.innerHTML = '<option value="TODOS">Todas las Series</option>';
 
                 seriesGlobales = [];
                 snapshot.forEach(d => {
                     const data = d.data();
                     data.id = d.id;
                     seriesGlobales.push(data);
-
-                    filtroSerieTabla.innerHTML += `<option value="${data.nombre}">${data.nombre} (${data.rodeoNombre})</option>`;
                     
                     let infoEstadoSerie = "";
                     if(data.estado === "abierto") {
@@ -277,7 +272,7 @@
                             </div>
                         </div>`;
                 });
-                filtroSerieTabla.value = seleccionSerieActual || "TODOS";
+                actualizarFiltroSeries();
                 actualizarContadoresSeries();
             });
 
@@ -292,6 +287,23 @@
                 actualizarContadoresSeries();
             });
         }
+
+        window.actualizarFiltroSeries = function() {
+            const rodeoSeleccionado = document.getElementById('filtroRodeoTabla').value;
+            const filtroSerieTabla = document.getElementById('filtroSerieTabla');
+            if (!filtroSerieTabla) return;
+
+            const seleccionActualSerie = filtroSerieTabla.value;
+            filtroSerieTabla.innerHTML = '<option value="TODOS">Todas las Series</option>';
+
+            seriesGlobales.forEach(serie => {
+                if (rodeoSeleccionado === "TODOS" || serie.rodeoNombre === rodeoSeleccionado) {
+                    filtroSerieTabla.innerHTML += `<option value="${serie.nombre}">${serie.nombre} (${serie.rodeoNombre})</option>`;
+                }
+            });
+
+            filtroSerieTabla.value = Array.from(filtroSerieTabla.options).some(opt => opt.value === seleccionActualSerie) ? seleccionActualSerie : "TODOS";
+        };
 
         window.actualizarContadoresSeries = function() {
             const contenedorContadores = document.getElementById('contenedorContadoresSeries');
@@ -411,7 +423,6 @@
 
             if(!rodeo || !serie || !minutos) return alert("Completa todos los campos obligatorios de la serie.");
             
-            // Doble confirmación solicitada para asegurar los requerimientos
             let mensajeConfirmacion = `¿Está seguro de crear la serie "${serie}" para el rodeo "${rodeo}"?\n\nConfiguración de Requisitos:\n- Documento FMA: ${reqFma ? 'OBLIGATORIO' : 'NO REQUERIDO'}\n- Certificado de Vacunas: ${reqVacunas ? 'OBLIGATORIO' : 'NO REQUERIDO'}`;
             if(!confirm(mensajeConfirmacion)) return;
             if(!confirm("⚠️ Segunda confirmación: ¿Confirma que los parámetros y requisitos seleccionados para esta serie son correctos?")) return;
@@ -512,7 +523,6 @@
 
             const ws = XLSX.utils.json_to_sheet(filasExcel);
 
-            // Agregar nota de descargo de responsabilidad legal y técnica al final del documento
             XLSX.utils.sheet_add_aoa(ws, [
                 [],
                 ["AVISO LEGAL Y TÉCNICO: Los enlaces a los archivos adjuntos (Comprobante de pago, Certificado de Vacunas y Documento FMA) tienen carácter temporal con una vigencia limitada de una semana. La Asociación de Rodeo Santiago Cumbre y el desarrollo del sistema no se responsabilizan por la disponibilidad permanente de las imágenes en dichos enlaces externos una vez expirado el plazo operativo."]
@@ -551,8 +561,6 @@
                     const cellAddress = XLSX.utils.encode_cell({ r: R, c: C });
                     if (ws[cellAddress] && ws[cellAddress].v) {
                         const valStr = ws[cellAddress].v.toString();
-                        
-                        // EVITA QUE EL AVISO LEGAL EXPANDA EL ANCHO DE LA COLUMNA
                         if (valStr.includes("AVISO LEGAL")) continue;
 
                         const cellLength = valStr.length;
