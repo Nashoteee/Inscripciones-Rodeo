@@ -79,10 +79,7 @@
                 <h1>⚙️ Panel de Administración</h1>
                 <div class="subtitulo-admin" style="margin-bottom: 0;">Asociación de Rodeo Santiago Cumbre</div>
             </div>
-            <div style="display: flex; gap: 10px;">
-                <a href="dev.html" class="btn-salir" style="background-color: #2980b9; text-decoration: none; display: inline-flex; align-items: center;">🛠️ Desarrollador</a>
-                <button class="btn-salir" onclick="cerrarSesion()">🔒 Cerrar Sesión</button>
-            </div>
+            <button class="btn-salir" onclick="cerrarSesion()">🔒 Cerrar Sesión</button>
         </div>
 
         <div class="card">
@@ -195,7 +192,6 @@
         }
         window.sha256 = sha256;
 
-        // VERIFICACIÓN DE SESIÓN AL CARGAR LA PÁGINA
         window.addEventListener('DOMContentLoaded', () => {
             const sesionActiva = sessionStorage.getItem('admin_santiago_cumbre_auth');
             const hashCorrecto = "be46db70f624d123856f10d01c385cd30a823d7177af4d3995f57e27afb27236";
@@ -318,7 +314,6 @@
             });
         }
 
-        // CAPA DE SEGURIDAD REFORZADA: Doble confirmación crítica para borrado de rodeos
         window.confirmarBorradoRodeo = async function(idRodeo, nombreRodeo) {
             let mensaje1 = `⚠️ ADVERTENCIA DE SEGURIDAD CRÍTICA ⚠️\n\nEstá a punto de eliminar el rodeo: "${nombreRodeo}".\n\nEsta acción NO se puede deshacer y afectará gravemente a la base de datos:\n- Dejará series y registros asociados huérfanos.\n- Romperá los filtros en cascada y contadores del panel de control.\n\n¿Desea continuar de todas formas?`;
             
