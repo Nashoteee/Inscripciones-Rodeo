@@ -226,7 +226,7 @@
                             <div><strong>${data.nombre}</strong><br>${estadoTexto}</div>
                             <div class="botones-item">
                                 <button class="btn-cerrar" onclick="cambiarEstadoItem('rodeos', '${d.id}', '${data.estado === "abierto" ? "cerrado" : "abierto"}')">${data.estado === "abierto" ? "Cerrar" : "Abrir"}</button>
-                                <button class="btn-eliminar" onclick="borrarPermanente('rodeos', '${d.id}', '¿Borrar este Rodeo?')">🗑️ Borrar</button>
+                                <button class="btn-eliminar" onclick="confirmarBorradoRodeo('${d.id}', '${data.nombre}')">🗑️ Borrar</button>
                             </div>
                         </div>`;
                     if(data.estado === "abierto") {
@@ -287,6 +287,24 @@
                 actualizarContadoresSeries();
             });
         }
+
+        // CAPA DE SEGURIDAD REFORZADA: Doble confirmación crítica para borrado de rodeos
+        window.confirmarBorradoRodeo = async function(idRodeo, nombreRodeo) {
+            let mensaje1 = `⚠️ ADVERTENCIA DE SEGURIDAD CRÍTICA ⚠️\n\nEstá a punto de eliminar el rodeo: "${nombreRodeo}".\n\nEsta acción NO se puede deshacer y afectará gravemente a la base de datos:\n- Dejará series y registros asociados huérfanos.\n- Romperá los filtros en cascada y contadores del panel de control.\n\n¿Desea continuar de todas formas?`;
+            
+            if(!confirm(mensaje1)) return;
+
+            let mensaje2 = `🛑 ÚLTIMA OPORTUNIDAD DE RESGUARDO 🛑\n\n¿Confirma absoluta y definitivamente que desea borrar el rodeo "${nombreRodeo}" y toda su estructura vinculada?`;
+            
+            if(!confirm(mensaje2)) return;
+
+            try {
+                await deleteDoc(doc(db, "rodeos", idRodeo));
+                alert(`El rodeo "${nombreRodeo}" ha sido eliminado exitosamente del sistema.`);
+            } catch (err) { 
+                alert("Error crítico al intentar borrar el rodeo: " + err.message); 
+            }
+        };
 
         window.actualizarFiltroSeries = function() {
             const rodeoSeleccionado = document.getElementById('filtroRodeoTabla').value;
@@ -376,7 +394,6 @@
                         botonVacunasHTML += `<a href="${url}" target="_blank" class="btn-pago" style="background:#8e44ad; color:#fff; font-size:11px; padding:3px; margin-bottom:2px;">Ver Cert. #${idx + 1}</a>`;
                     });
                 } else if (typeof ins.vacunasUrl === 'string' && ins.vacunasUrl !== "No requerido") {
-                    // Compatibilidad con registros antiguos de un solo archivo
                     botonVacunasHTML = `<a href="${ins.vacunasUrl}" target="_blank" class="btn-pago" style="background:#8e44ad; color:#fff;">💉 Ver Vacunas</a>`;
                 }
 
@@ -507,7 +524,6 @@
 
                 let estadoPagoTexto = (ins.estadoPago || "pendiente").toUpperCase();
 
-                // Formatear lista de URLs de vacunas para Excel (separadas por coma)
                 let vacunasTextoExcel = "No requerido / N/A";
                 if (ins.vacunasUrls && Array.isArray(ins.vacunasUrls) && ins.vacunasUrls.length > 0 && ins.vacunasUrls[0] !== "No requerido") {
                     vacunasTextoExcel = ins.vacunasUrls.join(", ");
