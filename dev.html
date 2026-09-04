@@ -22,24 +22,24 @@
 <body>
 
     <div class="login-screen" id="loginScreen">
-        <h2>🛠️ Acceso de Desarrollador</h2>
-        <p>Área restringida</p>
-        <input type="password" id="passInput" placeholder="Contraseña de seguridad" onkeydown="if(event.key === 'Enter') verificarPassword()">
-        <button onclick="verificarPassword()">Ingresar a Consola</button>
+        <h2>🛠️ Consola de Desarrollador</h2>
+        <p>Asociación de Rodeo Santiago Cumbre</p>
+        <input type="password" id="passInput" placeholder="Contraseña de desarrollo" onkeydown="if(event.key === 'Enter') verificarPasswordDev()">
+        <button onclick="verificarPasswordDev()">Ingresar</button>
     </div>
 
     <div class="dev-dashboard" id="devDashboard">
         <div class="header-dev">
             <div>
                 <h1>💻 Consola de Desarrollo</h1>
-                <div class="subtitulo-dev">Espacio de pruebas y modificaciones</div>
+                <div class="subtitulo-dev">Área restringida de pruebas</div>
             </div>
             <a href="administrador.html" class="btn-regresar">⬅️ Volver al Administrador</a>
         </div>
 
         <div class="card">
-            <h3>🚀 Entorno listo para programar</h3>
-            <p>Este espacio está protegido con la misma llave de seguridad y sesión activa. Aquí puedes empezar a integrar tus nuevas funciones o pruebas experimentales sin comprometer el sistema principal.</p>
+            <h3>🚀 Entorno Blindado</h3>
+            <p>Este espacio de pruebas utiliza una sesión independiente protegida. Puedes comenzar a integrar y ensayar nuevas características con total seguridad.</p>
         </div>
     </div>
 
@@ -51,9 +51,11 @@
             return hashArray.map(b => b.toString(16).padStart(2, '0')).join('');
         }
 
-        // Verificación automática de sesión al cargar
+        // Verificamos sesión propia para el desarrollador
         window.addEventListener('DOMContentLoaded', () => {
-            const sesionActiva = sessionStorage.getItem('admin_santiago_cumbre_auth');
+            const sesionActiva = sessionStorage.getItem('dev_santiago_cumbre_auth');
+            // Puedes cambiar este hash si deseas una contraseña distinta a la de administración, 
+            // o dejar el mismo hash si prefieres usar la misma clave maestra.
             const hashCorrecto = "be46db70f624d123856f10d01c385cd30a823d7177af4d3995f57e27afb27236";
 
             if (sesionActiva === hashCorrecto) {
@@ -62,13 +64,13 @@
             }
         });
         
-        window.verificarPassword = async function() {
+        window.verificarPasswordDev = async function() {
             const inputPass = document.getElementById('passInput').value;
             const hashIngresado = await sha256(inputPass);
             const hashCorrecto = "be46db70f624d123856f10d01c385cd30a823d7177af4d3995f57e27afb27236";
 
             if (hashIngresado === hashCorrecto) {
-                sessionStorage.setItem('admin_santiago_cumbre_auth', hashCorrecto);
+                sessionStorage.setItem('dev_santiago_cumbre_auth', hashCorrecto);
                 document.getElementById('loginScreen').style.display = "none";
                 document.getElementById('devDashboard').style.display = "block";
             } else {
