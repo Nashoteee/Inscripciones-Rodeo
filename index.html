@@ -70,18 +70,17 @@
                         <div class="form-group"><label>Criadero:</label><input type="text" id="criadero2" style="text-transform: uppercase;"></div>
                     </div>
                     
-                    <!-- Bloque Obligatorio Comprobante de Pago -->
                     <div class="alerta-pago"><h3>💳 Comprobante de Pago</h3><input type="file" id="comprobante" accept="image/png, image/jpeg" required></div>
                     
-                    <!-- Bloques Dinámicos según Configuración de Serie -->
                     <div class="alerta-doc" id="bloqueFma" style="display: none;">
                         <h3>📄 Documento FMA (Obligatorio para esta serie)</h3>
                         <input type="file" id="archivoFma" accept="image/png, image/jpeg">
                     </div>
 
                     <div class="alerta-doc" id="bloqueVacunas" style="display: none;">
-                        <h3>💉 Certificado de Vacunas (Obligatorio para esta serie)</h3>
-                        <input type="file" id="archivoVacunas" accept="image/png, image/jpeg">
+                        <h3>💉 Certificados de Vacunas (Múltiples caballos / Selección múltiple permitida)</h3>
+                        <input type="file" id="archivoVacunas" accept="image/png, image/jpeg" multiple>
+                        <span class="auto-fill-hint">💡 Puedes seleccionar varias imágenes a la vez (mantén presionado Ctrl o Shift, o selecciona múltiples desde tu celular).</span>
                     </div>
 
                     <div style="background: #f1f2f6; padding: 15px; border-radius: 6px; border: 1px solid #dcdde1; margin-top: 20px; margin-bottom: 20px; font-size: 13px;">
@@ -215,7 +214,6 @@
             const pideFma = opt.getAttribute('data-fma') === '1';
             const pideVacunas = opt.getAttribute('data-vacunas') === '1';
 
-            // Control visual y obligatorio dinámico de los nuevos documentos
             const bloqueFma = document.getElementById('bloqueFma');
             const bloqueVacunas = document.getElementById('bloqueVacunas');
             const inputFma = document.getElementById('archivoFma');
@@ -261,10 +259,9 @@
             }
         });
 
-        async function subirArchivoImgBB(fileInput) {
-            if (!fileInput || fileInput.files.length === 0) return "No requerido";
+        async function subirArchivoImgBB(file) {
             const formDataImg = new FormData();
-            formDataImg.append("image", fileInput.files[0]);
+            formDataImg.append("image", file);
 
             const res = await fetch(`https://api.imgbb.com/1/upload?key=2f84ad94ca28ab56dceb42ea0a3fa7cc`, { 
                 method: "POST", 
@@ -325,23 +322,33 @@
                     return;
                 }
 
-                // Evaluar si la serie exige FMA y/o Vacunas
                 const selectSerie = document.getElementById('serie');
                 const opt = selectSerie.options[selectSerie.selectedIndex];
                 const pideFma = opt.getAttribute('data-fma') === '1';
                 const pideVacunas = opt.getAttribute('data-vacunas') === '1';
 
                 let fmaUrl = "No requerido";
-                let vacunasUrl = "No requerido";
+                let vacunasUrls = [];
 
                 if (pideFma) {
                     btn.innerText = "Subiendo Documento FMA...";
-                    fmaUrl = await subirArchivoImgBB(document.getElementById('archivoFma'));
+                    const inputFma = document.getElementById('archivoFma');
+                    if(inputFma.files.length > 0) {
+                        fmaUrl = await subirArchivoImgBB(inputFma.files[0]);
+                    }
                 }
 
                 if (pideVacunas) {
-                    btn.innerText = "Subiendo Certificado de Vacunas...";
-                    vacunasUrl = await subirArchivoImgBB(document.getElementById('archivoVacunas'));
+                    const inputVacunas = document.getElementById('archivoVacunas');
+                    if (inputVacunas.files.length === 0) {
+                        throw new Error("Debe seleccionar al menos un certificado de vacunas.");
+                    }
+                    
+                    for (let i = 0; i < inputVacunas.files.length; i++) {
+                        btn.innerText = `Subiendo certificado de vacunas ${i + 1} de ${inputVacunas.files.length}...`;
+                        let urlImg = await subirArchivoImgBB(inputVacunas.files[i]);
+                        vacunasUrls.push(urlImg);
+                    }
                 }
 
                 btn.innerText = "Subiendo comprobante de pago...";
@@ -349,7 +356,7 @@
                 if (inputComprobante.files.length === 0) {
                     throw new Error("Debe seleccionar un comprobante de pago.");
                 }
-                const comprobanteUrl = await subirArchivoImgBB(inputComprobante);
+                const comprobanteUrl = await subirArchivoImgBB(inputComprobante.files[0]);
 
                 btn.innerText = "Registrando collera...";
 
@@ -358,7 +365,7 @@
                     serie: serieSeleccionada,
                     comprobanteUrl: comprobanteUrl, 
                     fmaUrl: fmaUrl,
-                    vacunasUrl: vacunasUrl,
+                    vacunasUrls: vacunasUrls.length > 0 ? vacunasUrls : ["No requerido"],
                     estadoPago: "pendiente", 
                     fecha: Date.now(), 
                     estado: "activo",
@@ -454,7 +461,5 @@
             }
         };
     </script>
-</body>
-</html>
 </body>
 </html>
