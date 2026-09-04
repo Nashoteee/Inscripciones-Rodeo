@@ -88,7 +88,7 @@
         // Verificación de sesión sincronizada con el index.html
         window.addEventListener('DOMContentLoaded', () => {
             const sesionDevActiva = sessionStorage.getItem('dev_santiago_cumbre_auth');
-            const hashDevEsperado = "be46db70f624d123856f10d01c385cd30a823d7177af4d3995f57e27afb27236";
+            const hashDevEsperado = "7691a81c8ebd9e37886813fae57afd0bea83e1d218fb89b1ea8cc90326772322";
 
             if (sesionDevActiva === hashDevEsperado) {
                 document.getElementById('devDashboard').style.display = "block";
