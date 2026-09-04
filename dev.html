@@ -3,79 +3,221 @@
 <head>
     <meta charset="UTF-8">
     <meta name="viewport" content="width=device-width, initial-scale=1.0">
-    <title>Consola de Desarrollo - Asociación de Rodeo Santiago Cumbre</title>
+    <title>Consola de Desarrollo y Rescate - Asociación de Rodeo Santiago Cumbre</title>
     <style>
         body { font-family: 'Segoe UI', Tahoma, Geneva, Verdana, sans-serif; background-color: #1e272e; padding: 20px; color: #fff; margin: 0; }
-        .login-screen { background: white; max-width: 400px; margin: 100px auto; padding: 30px; border-radius: 8px; text-align: center; color: #333; box-shadow: 0 4px 15px rgba(0,0,0,0.3); }
-        .login-screen input { width: 100%; padding: 10px; margin: 15px 0; border: 1px solid #ccc; border-radius: 4px; box-sizing: border-box; }
-        .login-screen button { background: #e67e22; color: white; border: none; padding: 10px; width: 100%; border-radius: 4px; cursor: pointer; font-size: 16px; font-weight: bold;}
-        
-        .dev-dashboard { display: none; max-width: 1000px; margin: auto; }
-        .header-dev { display: flex; justify-content: space-between; align-items: center; border-bottom: 2px solid #485460; padding-bottom: 15px; margin-bottom: 25px; }
+        .dev-dashboard { display: none; max-width: 1100px; margin: auto; padding-top: 10px; }
+        .header-dev { display: flex; justify-content: space-between; align-items: center; border-bottom: 2px solid #485460; padding-bottom: 15px; margin-bottom: 25px; flex-wrap: wrap; gap: 10px; }
         h1, h2 { color: #f1c40f; margin: 0; }
         .subtitulo-dev { color: #808e9b; font-weight: bold; text-transform: uppercase; font-size: 0.85em; letter-spacing: 1px; }
         
-        .card { background: #2f3640; padding: 20px; border-radius: 8px; margin-bottom: 20px; border: 1px solid #485460; }
+        .card { background: #2f3640; padding: 20px; border-radius: 8px; margin-bottom: 20px; border: 1px solid #485460; box-shadow: 0 4px 6px rgba(0,0,0,0.2); }
+        .card h3 { color: #f39c12; margin-top: 0; border-bottom: 1px solid #485460; padding-bottom: 8px; }
+        
+        input, select, button { padding: 10px; margin-bottom: 10px; border-radius: 4px; border: 1px solid #485460; width: 100%; box-sizing: border-box; background: #353b48; color: #fff; font-size: 14px; }
+        button { cursor: pointer; background-color: #e67e22; color: white; border: none; font-weight: bold; transition: 0.3s; }
+        button:hover { background-color: #d35400; }
+        
         .btn-regresar { background-color: #3498db; color: white; border: none; padding: 8px 15px; border-radius: 4px; cursor: pointer; font-weight: bold; font-size: 13px; text-decoration: none; display: inline-block; }
+        .btn-regresar:hover { background-color: #2980b9; }
+
+        .acceso-denegado { text-align: center; margin-top: 150px; color: #e74c3c; font-family: sans-serif; }
+        .alerta-info { background: #353b48; border-left: 4px solid #f39c12; padding: 12px; margin-bottom: 15px; font-size: 13px; color: #dcdde1; }
+        
+        table { width: 100%; border-collapse: collapse; margin-top: 10px; font-size: 13px; background: #353b48; }
+        th, td { border: 1px solid #485460; padding: 8px; text-align: left; }
+        th { background-color: #2f3640; color: #f1c40f; }
     </style>
 </head>
 <body>
 
-    <div class="login-screen" id="loginScreen">
-        <h2>🛠️ Consola de Desarrollador</h2>
-        <p>Asociación de Rodeo Santiago Cumbre</p>
-        <input type="password" id="passInput" placeholder="Contraseña de desarrollo" onkeydown="if(event.key === 'Enter') verificarPasswordDev()">
-        <button onclick="verificarPasswordDev()">Ingresar</button>
+    <!-- Pantalla de bloqueo si se intenta entrar sin la sesión correcta del index -->
+    <div id="pantallaBloqueada" class="acceso-denegado" style="display: none;">
+        <h2>⛔ Acceso Restringido</h2>
+        <p>Debe autenticarse correctamente desde la puerta de enlace en la página principal.</p>
+        <a href="index.html" class="btn-regresar" style="margin-top: 15px;">Ir al Inicio</a>
     </div>
 
     <div class="dev-dashboard" id="devDashboard">
         <div class="header-dev">
             <div>
-                <h1>💻 Consola de Desarrollo</h1>
-                <div class="subtitulo-dev">Área restringida de pruebas</div>
+                <h1>💻 Consola de Desarrollo y Mantenimiento</h1>
+                <div class="subtitulo-dev">Herramientas extraordinarias de rescate de base de datos</div>
             </div>
-            <a href="administrador.html" class="btn-regresar">⬅️ Volver al Administrador</a>
+            <a href="administrador.html" class="btn-regresar">⚙️ Ir al Administrador</a>
         </div>
 
+        <!-- Herramienta de Rescate de Registros Huérfanos -->
         <div class="card">
-            <h3>🚀 Entorno Blindado</h3>
-            <p>Este espacio de pruebas utiliza una sesión independiente protegida. Puedes comenzar a integrar y ensayar nuevas características con total seguridad.</p>
+            <h3>🔗 Rescate y Reasignación de Series / Registros Huérfanos</h3>
+            <div class="alerta-info">
+                💡 Esta herramienta detecta series o inscripciones que perdieron su vinculación con un rodeo activo (por borrado o inconsistencia). Permite reasignarlas de forma segura seleccionando un rodeo histórico identificado por su fecha de creación.
+            </div>
+            
+            <button onclick="buscarHuerfanos()" style="background-color: #2980b9; width: auto; padding: 8px 15px;">🔍 Buscar Elementos Huérfanos</button>
+            
+            <div id="contenedorHuerfanos" style="margin-top: 15px; overflow-x: auto;">
+                <p style="color: #a4b0be; font-style: italic;">Haga clic en el botón para escanear la base de datos en busca de anomalías estructurales.</p>
+            </div>
+        </div>
+
+        <!-- Utilidad de Respaldo Rápido (Backup JSON) -->
+        <div class="card">
+            <h3>📦 Respaldo Instantáneo de Base de Datos (Backup JSON)</h3>
+            <p style="font-size: 13px; color: #dcdde1;">Genera una copia de seguridad completa de todos los rodeos, series e inscripciones actuales antes de realizar cambios estructurales masivos.</p>
+            <button onclick="descargarBackupJSON()" style="background-color: #27ae60; width: auto; padding: 8px 15px;">📥 Descargar Respaldo JSON</button>
         </div>
     </div>
 
-    <script>
-        async function sha256(message) {
-            const msgBuffer = new TextEncoder().encode(message);
-            const hashBuffer = await crypto.subtle.digest('SHA-256', msgBuffer);
-            const hashArray = Array.from(new Uint8Array(hashBuffer));
-            return hashArray.map(b => b.toString(16).padStart(2, '0')).join('');
-        }
+    <script type="module">
+        import { initializeApp } from "https://www.gstatic.com/firebasejs/10.12.2/firebase-app.js";
+        import { getFirestore, collection, getDocs, updateDoc, doc } from "https://www.gstatic.com/firebasejs/10.12.2/firebase-firestore.js";
 
-        // Verificamos sesión propia para el desarrollador
+        const firebaseConfig = {
+          apiKey: "AIzaSyCqtSOu4YemJGUb9dRG_7IDZZBL4E3yNsM",
+          authDomain: "inscripciones-rodeos-909bb.firebaseapp.com",
+          projectId: "inscripciones-rodeos-909bb",
+          storageBucket: "inscripciones-rodeos-909bb.firebasestorage.app",
+          messagingSenderId: "541411909779",
+          appId: "1:541411909779:web:4cae02b122a4ac8928ad66"
+        };
+
+        const app = initializeApp(firebaseConfig);
+        const db = getFirestore(app);
+
+        // Verificación sincronizada con el acceso unificado del index.html
         window.addEventListener('DOMContentLoaded', () => {
-            const sesionActiva = sessionStorage.getItem('dev_santiago_cumbre_auth');
-            // Puedes cambiar este hash si deseas una contraseña distinta a la de administración, 
-            // o dejar el mismo hash si prefieres usar la misma clave maestra.
-            const hashCorrecto = "be46db70f624d123856f10d01c385cd30a823d7177af4d3995f57e27afb27236";
+            const sesionDevActiva = sessionStorage.getItem('dev_santiago_cumbre_auth');
+            const hashDevEsperado = "be46db70f624d123856f10d01c385cd30a823d7177af4d3995f57e27afb27236";
 
-            if (sesionActiva === hashCorrecto) {
-                document.getElementById('loginScreen').style.display = "none";
-                document.getElementById('devDashboard').style.display = "block";
-            }
-        });
-        
-        window.verificarPasswordDev = async function() {
-            const inputPass = document.getElementById('passInput').value;
-            const hashIngresado = await sha256(inputPass);
-            const hashCorrecto = "be46db70f624d123856f10d01c385cd30a823d7177af4d3995f57e27afb27236";
-
-            if (hashIngresado === hashCorrecto) {
-                sessionStorage.setItem('dev_santiago_cumbre_auth', hashCorrecto);
-                document.getElementById('loginScreen').style.display = "none";
+            if (sesionDevActiva === hashDevEsperado) {
                 document.getElementById('devDashboard').style.display = "block";
             } else {
-                alert("Contraseña incorrecta");
-                document.getElementById('passInput').value = '';
+                document.getElementById('pantallaBloqueada').style.display = "block";
+            }
+        });
+
+        // Función para buscar elementos huérfanos y armar el selector con fechas históricas
+        window.buscarHuerfanos = async function() {
+            const contenedor = document.getElementById('contenedorHuerfanos');
+            contenedor.innerHTML = "<p style='color: #f39c12;'>Escaneando colecciones en Firestore...</p>";
+
+            try {
+                // 1. Obtener todos los rodeos existentes con sus fechas de creación
+                const snapRodeos = await getDocs(collection(db, "rodeos"));
+                let listaRodeos = [];
+                snapRodeos.forEach(d => {
+                    let data = d.data();
+                    let fechaCreaciónFormateada = data.fechaApertura ? new Date(data.fechaApertura).toLocaleDateString('es-CL', { day: '2-digit', month: '2-digit', year: 'numeric', hour: '2-digit', minute: '2-digit' }) : "Fecha desconocida";
+                    listaRodeos.push({
+                        id: d.id,
+                        nombre: data.nombre,
+                        fechaTexto: fechaCreaciónFormateada
+                    });
+                });
+
+                // 2. Obtener todas las series para verificar cuáles apuntan a un rodeo inexistente
+                const snapSeries = await getDocs(collection(db, "series"));
+                let seriesHuerfanas = [];
+                
+                snapSeries.forEach(d => {
+                    let serie = d.data();
+                    serie.id = d.id;
+                    let rodeoExiste = listaRodeos.some(r => r.nombre === serie.rodeoNombre);
+                    if (!rodeoExiste) {
+                        seriesHuerfanas.push(serie);
+                    }
+                });
+
+                if (seriesHuerfanas.length === 0 && listaRodeos.length > 0) {
+                    contenedor.innerHTML = `<p style="color: #2ecc71;">✅ No se encontraron series huérfanas. La integridad de las relaciones está perfecta.</p>`;
+                    return;
+                }
+
+                if (listaRodeos.length === 0) {
+                    contenedor.innerHTML = `<p style="color: #e74c3c;">⚠️ No hay rodeos registrados en la base de datos para realizar reasignaciones.</p>`;
+                    return;
+                }
+
+                let html = `<p style="color: #e67e22; font-weight: bold;">Se encontraron ${seriesHuerfanas.length} serie(s) sin un rodeo válido asociado:</p>`;
+                html += `<table><thead><tr><th>Nombre de Serie</th><th>Rodeo Actual (Huérfano)</th><th>Reasignar a Rodeo Histórico</th><th>Acción</th></tr></thead><tbody>`;
+
+                seriesHuerfanas.forEach(s => {
+                    let selectId = `select_rodeo_${s.id}`;
+                    html += `<tr>
+                        <td><strong>${s.nombre}</strong></td>
+                        <td style="color: #e74c3c;">${s.rodeoNombre || 'Sin nombre'}</td>
+                        <td>
+                            <select id="${selectId}">
+                                <option value="">-- Seleccione Rodeo Correcto --</option>`;
+                    
+                    listaRodeos.forEach(r => {
+                        html += `<option value="${r.nombre}">${r.nombre} (Creado: ${r.fechaTexto})</option>`;
+                    });
+
+                    html += `</select>
+                        </td>
+                        <td><button onclick="reasignarSerie('${s.id}', '${selectId}')" style="padding: 6px 12px; margin: 0;">Reasignar</button></td>
+                    </tr>`;
+                });
+
+                html += `</tbody></table>`;
+                contenedor.innerHTML = html;
+
+            } catch (err) {
+                contenedor.innerHTML = `<p style="color: #e74c3c;">❌ Error al escanear datos: ${err.message}</p>`;
+            }
+        };
+
+        window.reasignarSerie = async function(idSerie, selectId) {
+            const nuevoRodeoNombre = document.getElementById(selectId).value;
+            if (!nuevoRodeoNombre) {
+                alert("Por favor, seleccione un rodeo válido del listado histórico.");
+                return;
+            }
+
+            if (!confirm(`¿Confirma reasignar esta serie al rodeo "${nuevoRodeoNombre}"?`)) return;
+
+            try {
+                await updateDoc(doc(db, "series", idSerie), {
+                    rodeoNombre: nuevoRodeoNombre
+                });
+                alert("¡Serie reasignada exitosamente!");
+                window.buscarHuerfanos();
+            } catch (err) {
+                alert("Error al actualizar la serie: " + err.message);
+            }
+        };
+
+        window.descargarBackupJSON = async function() {
+            try {
+                const [snapRodeos, snapSeries, snapInscripciones] = await Promise.all([
+                    getDocs(collection(db, "rodeos")),
+                    getDocs(collection(db, "series")),
+                    getDocs(collection(db, "inscripciones"))
+                ]);
+
+                let backup = {
+                    fechaRespaldo: new Date().toISOString(),
+                    rodeos: [],
+                    series: [],
+                    inscripciones: []
+                };
+
+                snapRodeos.forEach(d => backup.rodeos.push({ id: d.id, ...d.data() }));
+                snapSeries.forEach(d => backup.series.push({ id: d.id, ...d.data() }));
+                snapInscripciones.forEach(d => backup.inscripciones.push({ id: d.id, ...d.data() }));
+
+                const dataStr = "data:text/json;charset=utf-8," + encodeURIComponent(JSON.stringify(backup, null, 2));
+                const downloadAnchor = document.createElement('a');
+                downloadAnchor.setAttribute("href", dataStr);
+                downloadAnchor.setAttribute("download", `backup_rodeo_santiago_cumbre_${Date.now()}.json`);
+                document.body.appendChild(downloadAnchor);
+                downloadAnchor.click();
+                downloadAnchor.remove();
+
+            } catch (err) {
+                alert("Error al generar el respaldo: " + err.message);
             }
         };
     </script>
