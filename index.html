@@ -22,6 +22,7 @@
         .admin-link { color: #7f8c8d; text-decoration: none; }
         #tiempoRestante { display: none; color: #d35400; font-weight: bold; margin-top: 10px; font-family: monospace; font-size: 1.2em; background: #ffeaa7; padding: 8px; border-radius: 4px; text-align: center; border: 1px solid #f1c40f; }
         .alerta-pago { background-color: #e8f8f5; border: 1px solid #a3e4d7; padding: 15px; border-radius: 6px; margin-top: 20px; }
+        .alerta-doc { background-color: #ebf5fb; border: 1px solid #a9cce3; padding: 15px; border-radius: 6px; margin-top: 20px; }
         .seccion-consulta { background: #eaf2f8; border: 1px solid #a4b0be; padding: 15px; border-radius: 6px; margin-bottom: 25px; }
         .resultado-estado { margin-top: 15px; padding: 15px; border-radius: 6px; display: none; font-weight: normal; text-align: left; font-size: 14px; background: #fff; border: 1px solid #ccc; }
         .auto-fill-hint { font-size: 11px; color: #2980b9; margin-top: 2px; display: block; font-style: italic; }
@@ -68,9 +69,22 @@
                         <div class="form-group"><label>Teléfono:</label><input type="tel" id="telefono2"></div>
                         <div class="form-group"><label>Criadero:</label><input type="text" id="criadero2" style="text-transform: uppercase;"></div>
                     </div>
+                    
+                    <!-- Bloque Obligatorio Comprobante de Pago -->
                     <div class="alerta-pago"><h3>💳 Comprobante de Pago</h3><input type="file" id="comprobante" accept="image/png, image/jpeg" required></div>
                     
-                    <div style="background: #f1f2f6; padding: 15px; border-radius: 6px; border: 1px solid #dcdde1; margin-bottom: 20px; font-size: 13px;">
+                    <!-- Bloques Dinámicos según Configuración de Serie -->
+                    <div class="alerta-doc" id="bloqueFma" style="display: none;">
+                        <h3>📄 Documento FMA (Obligatorio para esta serie)</h3>
+                        <input type="file" id="archivoFma" accept="image/png, image/jpeg">
+                    </div>
+
+                    <div class="alerta-doc" id="bloqueVacunas" style="display: none;">
+                        <h3>💉 Certificado de Vacunas (Obligatorio para esta serie)</h3>
+                        <input type="file" id="archivoVacunas" accept="image/png, image/jpeg">
+                    </div>
+
+                    <div style="background: #f1f2f6; padding: 15px; border-radius: 6px; border: 1px solid #dcdde1; margin-top: 20px; margin-bottom: 20px; font-size: 13px;">
                         <label style="display: flex; align-items: flex-start; gap: 10px; cursor: pointer; font-weight: normal;">
                             <input type="checkbox" id="aceptoTerminos" required style="width: 20px; height: 20px; margin-top: 2px;">
                             <span><strong>Acepto términos:</strong> Autorizo tratamiento de mis datos personales para la Asociación. Lee nuestra <a href="privacidad.html" target="_blank">Política de Privacidad aquí</a>.</span>         
@@ -172,6 +186,10 @@
             if(!v) { 
                 sS.innerHTML = '<option value="">Primero seleccione Rodeo...</option>'; 
                 sS.disabled = true; 
+                document.getElementById('bloqueFma').style.display = "none";
+                document.getElementById('bloqueVacunas').style.display = "none";
+                document.getElementById('archivoFma').required = false;
+                document.getElementById('archivoVacunas').required = false;
                 return; 
             }
             sS.disabled = false;
@@ -179,7 +197,10 @@
             
             unsubscribeSeries = onSnapshot(query(collection(db, "series"), where("estado", "==", "abierto"), where("rodeoNombre", "==", v)), (snap) => {
                 sS.innerHTML = snap.empty ? '<option value="">No hay series abiertas</option>' : '<option value="">Seleccione Serie...</option>';
-                snap.forEach(d => sS.innerHTML += `<option value="${d.data().nombre}" data-cierre="${d.data().fechaCierre}" data-id="${d.id}">${d.data().nombre}</option>`);
+                snap.forEach(d => {
+                    const data = d.data();
+                    sS.innerHTML += `<option value="${data.nombre}" data-cierre="${data.fechaCierre}" data-id="${d.id}" data-fma="${data.pideFma ? '1' : '0'}" data-vacunas="${data.pideVacunas ? '1' : '0'}">${data.nombre}</option>`;
+                });
             }, (error) => {
                 console.error("Error al cargar series:", error);
                 sS.innerHTML = '<option value="">Error al cargar series</option>';
@@ -188,8 +209,36 @@
 
         document.getElementById('serie').addEventListener('change', () => {
             clearInterval(cronometroInterval);
-            const opt = document.getElementById('serie').options[document.getElementById('serie').selectedIndex];
+            const selectSerie = document.getElementById('serie');
+            const opt = selectSerie.options[selectSerie.selectedIndex];
             const cierre = opt.getAttribute('data-cierre');
+            const pideFma = opt.getAttribute('data-fma') === '1';
+            const pideVacunas = opt.getAttribute('data-vacunas') === '1';
+
+            // Control visual y obligatorio dinámico de los nuevos documentos
+            const bloqueFma = document.getElementById('bloqueFma');
+            const bloqueVacunas = document.getElementById('bloqueVacunas');
+            const inputFma = document.getElementById('archivoFma');
+            const inputVacunas = document.getElementById('archivoVacunas');
+
+            if (pideFma) {
+                bloqueFma.style.display = "block";
+                inputFma.required = true;
+            } else {
+                bloqueFma.style.display = "none";
+                inputFma.required = false;
+                inputFma.value = "";
+            }
+
+            if (pideVacunas) {
+                bloqueVacunas.style.display = "block";
+                inputVacunas.required = true;
+            } else {
+                bloqueVacunas.style.display = "none";
+                inputVacunas.required = false;
+                inputVacunas.value = "";
+            }
+
             const timer = document.getElementById('tiempoRestante');
             if(cierre && cierre !== "undefined") {
                 timer.style.display = "block";
@@ -212,6 +261,22 @@
             }
         });
 
+        async function subirArchivoImgBB(fileInput) {
+            if (!fileInput || fileInput.files.length === 0) return "No requerido";
+            const formDataImg = new FormData();
+            formDataImg.append("image", fileInput.files[0]);
+
+            const res = await fetch(`https://api.imgbb.com/1/upload?key=2f84ad94ca28ab56dceb42ea0a3fa7cc`, { 
+                method: "POST", 
+                body: formDataImg 
+            });
+            const json = await res.json();
+            if (!json.success) {
+                throw new Error(json.error?.message || "Error al subir imagen a ImgBB.");
+            }
+            return json.data.url;
+        }
+
         document.getElementById('registroForm').addEventListener('submit', async function(e) {
             e.preventDefault();
             let r1 = document.getElementById('rut1').value.trim();
@@ -227,7 +292,6 @@
             btn.innerText = "Verificando disponibilidad...";
 
             try {
-                // Consultar inscripciones existentes para esta serie y rodeo
                 const qInscritas = query(
                     collection(db, "inscripciones"), 
                     where("rodeo", "==", rodeoSeleccionado), 
@@ -241,17 +305,10 @@
 
                 querySnapshot.forEach((doc) => {
                     const data = doc.data();
-                    // Verificar si el RUT 1 ya está en esta serie (como jinete1 o jinete2 en otra collera)
-                    if (data.rut1 === r1 || data.rut2 === r1) {
-                        jinete1Inscrito = true;
-                    }
-                    // Verificar si el RUT 2 ya está en esta serie
-                    if (data.rut1 === r2 || data.rut2 === r2) {
-                        jinete2Inscrito = true;
-                    }
+                    if (data.rut1 === r1 || data.rut2 === r1) jinete1Inscrito = true;
+                    if (data.rut1 === r2 || data.rut2 === r2) jinete2Inscrito = true;
                 });
 
-                // Si alguno de los dos (o ambos) ya está inscrito, armar advertencia detallada
                 if (jinete1Inscrito || jinete2Inscrito) {
                     let mensaje = "⚠️ Atención:\n";
                     if (jinete1Inscrito && jinete2Inscrito) {
@@ -268,33 +325,40 @@
                     return;
                 }
 
-                btn.innerText = "Subiendo comprobante...";
+                // Evaluar si la serie exige FMA y/o Vacunas
+                const selectSerie = document.getElementById('serie');
+                const opt = selectSerie.options[selectSerie.selectedIndex];
+                const pideFma = opt.getAttribute('data-fma') === '1';
+                const pideVacunas = opt.getAttribute('data-vacunas') === '1';
 
+                let fmaUrl = "No requerido";
+                let vacunasUrl = "No requerido";
+
+                if (pideFma) {
+                    btn.innerText = "Subiendo Documento FMA...";
+                    fmaUrl = await subirArchivoImgBB(document.getElementById('archivoFma'));
+                }
+
+                if (pideVacunas) {
+                    btn.innerText = "Subiendo Certificado de Vacunas...";
+                    vacunasUrl = await subirArchivoImgBB(document.getElementById('archivoVacunas'));
+                }
+
+                btn.innerText = "Subiendo comprobante de pago...";
                 const inputComprobante = document.getElementById('comprobante');
                 if (inputComprobante.files.length === 0) {
                     throw new Error("Debe seleccionar un comprobante de pago.");
                 }
-
-                const formDataImg = new FormData();
-                formDataImg.append("image", inputComprobante.files[0]);
-
-                const res = await fetch(`https://api.imgbb.com/1/upload?key=2f84ad94ca28ab56dceb42ea0a3fa7cc`, { 
-                    method: "POST", 
-                    body: formDataImg 
-                });
-                
-                const json = await res.json();
-                
-                if (!json.success) {
-                    throw new Error(json.error?.message || "Error al subir la imagen a ImgBB.");
-                }
+                const comprobanteUrl = await subirArchivoImgBB(inputComprobante);
 
                 btn.innerText = "Registrando collera...";
 
                 await addDoc(collection(db, "inscripciones"), {
                     rodeo: rodeoSeleccionado, 
                     serie: serieSeleccionada,
-                    comprobanteUrl: json.data.url, 
+                    comprobanteUrl: comprobanteUrl, 
+                    fmaUrl: fmaUrl,
+                    vacunasUrl: vacunasUrl,
                     estadoPago: "pendiente", 
                     fecha: Date.now(), 
                     estado: "activo",
@@ -390,5 +454,7 @@
             }
         };
     </script>
+</body>
+</html>
 </body>
 </html>
