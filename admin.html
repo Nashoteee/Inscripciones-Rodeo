@@ -13,9 +13,12 @@
         .login-screen button { background: #27ae60; color: white; border: none; padding: 10px; width: 100%; border-radius: 4px; cursor: pointer; font-size: 16px; font-weight: bold;}
         
         .admin-dashboard { display: none; max-width: 1200px; margin: auto; }
+        .header-admin { display: flex; justify-content: space-between; align-items: center; flex-wrap: wrap; margin-bottom: 20px; }
         h1, h2 { color: white; text-align: center; margin-bottom: 5px; }
         .subtitulo-admin { text-align: center; color: #bdc3c7; font-weight: bold; margin-bottom: 25px; text-transform: uppercase; letter-spacing: 1px; }
         
+        .btn-salir { background-color: #c0392b; color: white; border: none; padding: 8px 15px; border-radius: 4px; cursor: pointer; font-weight: bold; font-size: 13px; }
+
         .card { background: white; padding: 20px; border-radius: 8px; margin-bottom: 20px; box-shadow: 0 2px 5px rgba(0,0,0,0.1); }
         .card h3 { margin-top: 0; color: #2c3e50; border-bottom: 2px solid #ecf0f1; padding-bottom: 10px; display: flex; justify-content: space-between; align-items: center; flex-wrap: wrap; gap: 10px; }
         
@@ -51,7 +54,7 @@
         th, td { border: 1px solid #ddd; padding: 10px; text-align: left; vertical-align: top;}
         th { background-color: #f4f4f4; color: #333;}
         .meta-info { font-size: 12px; color: #7f8c8d; display: block;}
-        .acciones-col { width: 150px; }
+        .acciones-col { width: 160px; }
 
         .grid-contadores { display: grid; grid-template-columns: repeat(auto-fill, minmax(260px, 1fr)); gap: 15px; margin-top: 15px; }
         .card-serie-contador { background: #f8f9fa; border: 1px solid #cbd5e1; border-radius: 6px; padding: 15px; border-left: 5px solid #2980b9; }
@@ -66,13 +69,21 @@
     <div class="login-screen" id="loginScreen">
         <h2>🔒 Panel de Control</h2>
         <p>Asociación de Rodeo Santiago Cumbre</p>
-        <input type="password" id="passInput" placeholder="Contraseña">
+        <input type="password" id="passInput" placeholder="Contraseña" onkeydown="if(event.key === 'Enter') verificarPassword()">
         <button onclick="verificarPassword()">Ingresar</button>
     </div>
 
     <div class="admin-dashboard" id="adminDashboard">
-        <h1>⚙️ Panel de Administración</h1>
-        <div class="subtitulo-admin">Asociación de Rodeo Santiago Cumbre</div>
+        <div class="header-admin">
+            <div>
+                <h1>⚙️ Panel de Administración</h1>
+                <div class="subtitulo-admin" style="margin-bottom: 0;">Asociación de Rodeo Santiago Cumbre</div>
+            </div>
+            <div style="display: flex; gap: 10px;">
+                <a href="dev.html" class="btn-salir" style="background-color: #2980b9; text-decoration: none; display: inline-flex; align-items: center;">🛠️ Desarrollador</a>
+                <button class="btn-salir" onclick="cerrarSesion()">🔒 Cerrar Sesión</button>
+            </div>
+        </div>
 
         <div class="card">
             <h3>
@@ -183,6 +194,18 @@
             return hashArray.map(b => b.toString(16).padStart(2, '0')).join('');
         }
         window.sha256 = sha256;
+
+        // VERIFICACIÓN DE SESIÓN AL CARGAR LA PÁGINA
+        window.addEventListener('DOMContentLoaded', () => {
+            const sesionActiva = sessionStorage.getItem('admin_santiago_cumbre_auth');
+            const hashCorrecto = "be46db70f624d123856f10d01c385cd30a823d7177af4d3995f57e27afb27236";
+
+            if (sesionActiva === hashCorrecto) {
+                document.getElementById('loginScreen').style.display = "none";
+                document.getElementById('adminDashboard').style.display = "block";
+                iniciarBaseDeDatos();
+            }
+        });
         
         window.verificarPassword = async function() {
             const inputPass = document.getElementById('passInput').value;
@@ -190,12 +213,19 @@
             const hashCorrecto = "be46db70f624d123856f10d01c385cd30a823d7177af4d3995f57e27afb27236";
 
             if (hashIngresado === hashCorrecto) {
+                sessionStorage.setItem('admin_santiago_cumbre_auth', hashCorrecto);
                 document.getElementById('loginScreen').style.display = "none";
                 document.getElementById('adminDashboard').style.display = "block";
                 iniciarBaseDeDatos();
             } else {
                 alert("Contraseña incorrecta");
+                document.getElementById('passInput').value = '';
             }
+        };
+
+        window.cerrarSesion = function() {
+            sessionStorage.removeItem('admin_santiago_cumbre_auth');
+            location.reload();
         };
 
         function iniciarBaseDeDatos() {
