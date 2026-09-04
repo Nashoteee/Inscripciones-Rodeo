@@ -31,7 +31,7 @@
 </head>
 <body>
 
-    <!-- Pantalla de bloqueo si se intenta entrar sin la sesión correcta del index -->
+    <!-- Pantalla de bloqueo corregida apuntando correctamente a index.html -->
     <div id="pantallaBloqueada" class="acceso-denegado" style="display: none;">
         <h2>⛔ Acceso Restringido</h2>
         <p>Debe autenticarse correctamente desde la puerta de enlace en la página principal.</p>
@@ -44,7 +44,7 @@
                 <h1>💻 Consola de Desarrollo y Mantenimiento</h1>
                 <div class="subtitulo-dev">Herramientas extraordinarias de rescate de base de datos</div>
             </div>
-            <a href="administrador.html" class="btn-regresar">⚙️ Ir al Administrador</a>
+            <a href="admin.html" class="btn-regresar">⚙️ Ir al Administrador</a>
         </div>
 
         <!-- Herramienta de Rescate de Registros Huérfanos -->
@@ -85,7 +85,7 @@
         const app = initializeApp(firebaseConfig);
         const db = getFirestore(app);
 
-        // Verificación sincronizada con el acceso unificado del index.html
+        // Verificación de sesión sincronizada con el index.html
         window.addEventListener('DOMContentLoaded', () => {
             const sesionDevActiva = sessionStorage.getItem('dev_santiago_cumbre_auth');
             const hashDevEsperado = "be46db70f624d123856f10d01c385cd30a823d7177af4d3995f57e27afb27236";
@@ -97,13 +97,11 @@
             }
         });
 
-        // Función para buscar elementos huérfanos y armar el selector con fechas históricas
         window.buscarHuerfanos = async function() {
             const contenedor = document.getElementById('contenedorHuerfanos');
             contenedor.innerHTML = "<p style='color: #f39c12;'>Escaneando colecciones en Firestore...</p>";
 
             try {
-                // 1. Obtener todos los rodeos existentes con sus fechas de creación
                 const snapRodeos = await getDocs(collection(db, "rodeos"));
                 let listaRodeos = [];
                 snapRodeos.forEach(d => {
@@ -116,7 +114,6 @@
                     });
                 });
 
-                // 2. Obtener todas las series para verificar cuáles apuntan a un rodeo inexistente
                 const snapSeries = await getDocs(collection(db, "series"));
                 let seriesHuerfanas = [];
                 
