@@ -31,7 +31,6 @@
 </head>
 <body>
 
-    <!-- Pantalla de bloqueo corregida apuntando correctamente a index.html -->
     <div id="pantallaBloqueada" class="acceso-denegado" style="display: none;">
         <h2>⛔ Acceso Restringido</h2>
         <p>Debe autenticarse correctamente desde la puerta de enlace en la página principal.</p>
@@ -49,9 +48,9 @@
 
         <!-- Herramienta de Rescate de Registros Huérfanos -->
         <div class="card">
-            <h3>🔗 Rescate y Reasignación de Series / Registros Huérfanos</h3>
+            <h3>🔗 Rescate y Reasignación de Series Huérfanas</h3>
             <div class="alerta-info">
-                💡 Esta herramienta detecta series o inscripciones que perdieron su vinculación con un rodeo activo (por borrado o inconsistencia). Permite reasignarlas de forma segura seleccionando un rodeo histórico identificado por su fecha de creación.
+                💡 Esta herramienta detecta series que perdieron su vinculación con un rodeo activo. El menú desplegable incluye como primera opción la alternativa de <strong>volver a crear el rodeo original eliminado</strong>, o bien reasignarlas a cualquier otro rodeo existente.
             </div>
             
             <button onclick="buscarHuerfanos()" style="background-color: #2980b9; width: auto; padding: 8px 15px;">🔍 Buscar Elementos Huérfanos</button>
@@ -71,7 +70,7 @@
 
     <script type="module">
         import { initializeApp } from "https://www.gstatic.com/firebasejs/10.12.2/firebase-app.js";
-        import { getFirestore, collection, getDocs, updateDoc, doc } from "https://www.gstatic.com/firebasejs/10.12.2/firebase-firestore.js";
+        import { getFirestore, collection, getDocs, updateDoc, addDoc, doc } from "https://www.gstatic.com/firebasejs/10.12.2/firebase-firestore.js";
 
         const firebaseConfig = {
           apiKey: "AIzaSyCqtSOu4YemJGUb9dRG_7IDZZBL4E3yNsM",
@@ -85,7 +84,6 @@
         const app = initializeApp(firebaseConfig);
         const db = getFirestore(app);
 
-        // Verificación de sesión sincronizada con el index.html
         window.addEventListener('DOMContentLoaded', () => {
             const sesionDevActiva = sessionStorage.getItem('dev_santiago_cumbre_auth');
             const hashDevEsperado = "7691a81c8ebd9e37886813fae57afd0bea83e1d218fb89b1ea8cc90326772322";
@@ -131,30 +129,33 @@
                     return;
                 }
 
-                if (listaRodeos.length === 0) {
-                    contenedor.innerHTML = `<p style="color: #e74c3c;">⚠️ No hay rodeos registrados en la base de datos para realizar reasignaciones.</p>`;
+                if (listaRodeos.length === 0 && seriesHuerfanas.length === 0) {
+                    contenedor.innerHTML = `<p style="color: #e74c3c;">⚠️ No hay rodeos ni series registradas en la base de datos.</p>`;
                     return;
                 }
 
                 let html = `<p style="color: #e67e22; font-weight: bold;">Se encontraron ${seriesHuerfanas.length} serie(s) sin un rodeo válido asociado:</p>`;
-                html += `<table><thead><tr><th>Nombre de Serie</th><th>Rodeo Actual (Huérfano)</th><th>Reasignar a Rodeo Histórico</th><th>Acción</th></tr></thead><tbody>`;
+                html += `<table><thead><tr><th>Nombre de Serie</th><th>Rodeo Faltante (Huérfano)</th><th>Seleccionar Opción de Rescate</th><th>Acción</th></tr></thead><tbody>`;
 
                 seriesHuerfanas.forEach(s => {
                     let selectId = `select_rodeo_${s.id}`;
+                    let nombreRodeoFaltante = s.rodeoNombre || 'Sin nombre';
+                    
                     html += `<tr>
                         <td><strong>${s.nombre}</strong></td>
-                        <td style="color: #e74c3c;">${s.rodeoNombre || 'Sin nombre'}</td>
+                        <td style="color: #e74c3c;">${nombreRodeoFaltante}</td>
                         <td>
                             <select id="${selectId}">
-                                <option value="">-- Seleccione Rodeo Correcto --</option>`;
+                                <option value="">-- Seleccionar Destino --</option>
+                                <option value="__RECREAR__" style="color: #27ae60; font-weight: bold;">➕ [RECREAR] Volver a crear rodeo: "${nombreRodeoFaltante}"</option>`;
                     
                     listaRodeos.forEach(r => {
-                        html += `<option value="${r.nombre}">${r.nombre} (Creado: ${r.fechaTexto})</option>`;
+                        html += `<option value="${r.nombre}">Asignar a: ${r.nombre} (Creado: ${r.fechaTexto})</option>`;
                     });
 
                     html += `</select>
                         </td>
-                        <td><button onclick="reasignarSerie('${s.id}', '${selectId}')" style="padding: 6px 12px; margin: 0;">Reasignar</button></td>
+                        <td><button onclick="procesarRescateSerie('${s.id}', '${selectId}', '${nombreRodeoFaltante.replace(/'/g, "\\'")}')" style="padding: 6px 12px; margin: 0; background: #27ae60;">Aplicar</button></td>
                     </tr>`;
                 });
 
@@ -166,23 +167,40 @@
             }
         };
 
-        window.reasignarSerie = async function(idSerie, selectId) {
-            const nuevoRodeoNombre = document.getElementById(selectId).value;
-            if (!nuevoRodeoNombre) {
-                alert("Por favor, seleccione un rodeo válido del listado histórico.");
+        // Función inteligente que maneja la opción seleccionada en el desplegable
+        window.procesarRescateSerie = async function(idSerie, selectId, nombreRodeoOriginal) {
+            const valorSeleccionado = document.getElementById(selectId).value;
+            if (!valorSeleccionado) {
+                alert("Por favor, seleccione una opción válida del menú desplegable.");
                 return;
             }
 
-            if (!confirm(`¿Confirma reasignar esta serie al rodeo "${nuevoRodeoNombre}"?`)) return;
-
             try {
-                await updateDoc(doc(db, "series", idSerie), {
-                    rodeoNombre: nuevoRodeoNombre
-                });
-                alert("¡Serie reasignada exitosamente!");
-                window.buscarHuerfanos();
+                if (valorSeleccionado === "__RECREAR__") {
+                    if (!confirm(`¿Confirma volver a crear el rodeo "${nombreRodeoOriginal}" en la base de datos con estado abierto?`)) return;
+                    
+                    // 1. Crear el rodeo eliminado
+                    await addDoc(collection(db, "rodeos"), {
+                        nombre: nombreRodeoOriginal,
+                        estado: "abierto",
+                        fechaApertura: Date.now()
+                    });
+
+                    alert(`¡El rodeo "${nombreRodeoOriginal}" ha sido recreado exitosamente y la serie vuelve a estar enlazada!`);
+                } else {
+                    if (!confirm(`¿Confirma reasignar esta serie al rodeo existente "${valorSeleccionado}"?`)) return;
+
+                    // 2. Reasignar al rodeo seleccionado
+                    await updateDoc(doc(db, "series", idSerie), {
+                        rodeoNombre: valorSeleccionado
+                    });
+
+                    alert("¡Serie reasignada exitosamente!");
+                }
+
+                window.buscarHuerfanos(); // Actualizar la tabla
             } catch (err) {
-                alert("Error al actualizar la serie: " + err.message);
+                alert("Error al procesar la operación: " + err.message);
             }
         };
 
