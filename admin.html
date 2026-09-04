@@ -53,12 +53,12 @@
         .meta-info { font-size: 12px; color: #7f8c8d; display: block;}
         .acciones-col { width: 130px; }
 
-        /* Estilos para las tarjetas de contadores por serie */
         .grid-contadores { display: grid; grid-template-columns: repeat(auto-fill, minmax(260px, 1fr)); gap: 15px; margin-top: 15px; }
         .card-serie-contador { background: #f8f9fa; border: 1px solid #cbd5e1; border-radius: 6px; padding: 15px; border-left: 5px solid #2980b9; }
         .card-serie-contador h4 { margin: 0 0 10px 0; color: #1e293b; font-size: 16px; border-bottom: 1px solid #e2e8f0; padding-bottom: 6px; }
         .stats-row { display: flex; justify-content: space-between; font-size: 13px; margin-bottom: 6px; font-weight: 500; }
         .stat-val { font-weight: bold; padding: 1px 6px; border-radius: 4px; }
+        .config-box { background: #f1f2f6; padding: 10px; border-radius: 4px; border: 1px solid #dcdde1; margin-bottom: 10px; }
     </style>
 </head>
 <body>
@@ -74,7 +74,6 @@
         <h1>⚙️ Panel de Administración</h1>
         <div class="subtitulo-admin">Asociación de Rodeo Santiago Cumbre</div>
 
-        <!-- SECCIÓN: CONTADORES DE COLLERAS INSCRITAS CON FILTRO POR RODEO -->
         <div class="card">
             <h3>
                 <span>📊 Resumen y Contadores de Colleras por Serie</span>
@@ -105,7 +104,18 @@
                 <select id="rodeoParaSerie"><option value="">Cargando...</option></select>
                 <input type="text" id="nuevaSerie" placeholder="Nombre de la serie">
                 <input type="number" id="tiempoSerie" placeholder="Minutos de duración (Cronómetro)" min="1">
-                <button class="btn-crear" onclick="crearSerie()">+ Abrir Serie con Temporizador</button>
+                
+                <div class="config-box">
+                    <label style="font-size: 12px; font-weight: bold; color: #2c3e50; margin-bottom: 6px; display: block;">Requisitos Obligatorios de Documentos:</label>
+                    <label style="display: flex; align-items: center; gap: 8px; font-size: 13px; font-weight: normal; cursor: pointer; margin-bottom: 6px;">
+                        <input type="checkbox" id="reqFmaSerie" style="width: 16px; height: 16px; margin: 0;"> Exigir Documento FMA
+                    </label>
+                    <label style="display: flex; align-items: center; gap: 8px; font-size: 13px; font-weight: normal; cursor: pointer; margin: 0;">
+                        <input type="checkbox" id="reqVacunasSerie" style="width: 16px; height: 16px; margin: 0;"> Exigir Certificado de Vacunas
+                    </label>
+                </div>
+
+                <button class="btn-crear" onclick="crearSerie()">+ Abrir Serie con Requisitos y Temporizador</button>
                 <h4>Series Registradas:</h4>
                 <div id="listaSeries"></div>
             </div>
@@ -166,29 +176,27 @@
         let seriesGlobales = [];
         window.seriesCerrando = {}; 
 
-async function sha256(message) {
-    const msgBuffer = new TextEncoder().encode(message);
-    const hashBuffer = await crypto.subtle.digest('SHA-256', msgBuffer);
-    const hashArray = Array.from(new Uint8Array(hashBuffer));
-    return hashArray.map(b => b.toString(16).padStart(2, '0')).join('');
-}
-window.sha256 = sha256; // Esto es lo que permite que el botón la encuentre
+        async function sha256(message) {
+            const msgBuffer = new TextEncoder().encode(message);
+            const hashBuffer = await crypto.subtle.digest('SHA-256', msgBuffer);
+            const hashArray = Array.from(new Uint8Array(hashBuffer));
+            return hashArray.map(b => b.toString(16).padStart(2, '0')).join('');
+        }
+        window.sha256 = sha256;
         
-window.verificarPassword = async function() {
-    const inputPass = document.getElementById('passInput').value;
-    const hashIngresado = await sha256(inputPass);
-    
-    // Usamos el hash exacto que te arrojó tu propio navegador
-    const hashCorrecto = "be46db70f624d123856f10d01c385cd30a823d7177af4d3995f57e27afb27236";
+        window.verificarPassword = async function() {
+            const inputPass = document.getElementById('passInput').value;
+            const hashIngresado = await sha256(inputPass);
+            const hashCorrecto = "be46db70f624d123856f10d01c385cd30a823d7177af4d3995f57e27afb27236";
 
-    if (hashIngresado === hashCorrecto) {
-        document.getElementById('loginScreen').style.display = "none";
-        document.getElementById('adminDashboard').style.display = "block";
-        iniciarBaseDeDatos();
-    } else {
-        alert("Contraseña incorrecta");
-    }
-};
+            if (hashIngresado === hashCorrecto) {
+                document.getElementById('loginScreen').style.display = "none";
+                document.getElementById('adminDashboard').style.display = "block";
+                iniciarBaseDeDatos();
+            } else {
+                alert("Contraseña incorrecta");
+            }
+        };
 
         function iniciarBaseDeDatos() {
             onSnapshot(collection(db, "rodeos"), (snapshot) => {
@@ -251,11 +259,17 @@ window.verificarPassword = async function() {
                         infoEstadoSerie = `<span style="color:#e74c3c; font-size:12px; font-weight:bold;">Cerrada Manualmente</span>`;
                     }
 
+                    let reqsTxt = [];
+                    if(data.pideFma) reqsTxt.push("FMA");
+                    if(data.pideVacunas) reqsTxt.push("Vacunas");
+                    let badgeReqs = reqsTxt.length > 0 ? `<span style="background: #e2e8f0; color: #334155; font-size: 10px; padding: 2px 5px; border-radius: 3px; font-weight: bold;">Exige: ${reqsTxt.join(", ")}</span>` : `<span style="color: #94a3b8; font-size: 10px;">Sin requisitos extra</span>`;
+
                     contenedor.innerHTML += `
                         <div class="item-lista">
                             <div>
                                 <strong>${data.nombre}</strong> <br>
-                                <span class="etiqueta-rodeo">${data.rodeoNombre}</span> | ${infoEstadoSerie}
+                                <span class="etiqueta-rodeo">${data.rodeoNombre}</span> | ${infoEstadoSerie} <br>
+                                ${badgeReqs}
                             </div>
                             <div class="botones-item">
                                 <button class="btn-cerrar" onclick="cambiarEstadoItem('series', '${d.id}', '${data.estado === "abierto" ? "cerrado" : "abierto"}')">${data.estado === "abierto" ? "Cerrar" : "Abrir"}</button>
@@ -279,13 +293,11 @@ window.verificarPassword = async function() {
             });
         }
 
-        // FUNCIÓN ACTUALIZADA: Calcula contadores respetando el filtro de rodeo seleccionado
         window.actualizarContadoresSeries = function() {
             const contenedorContadores = document.getElementById('contenedorContadoresSeries');
             const rodeoSeleccionadoFiltro = document.getElementById('filtroRodeoContadores').value;
             if(!contenedorContadores) return;
 
-            // Filtrar series según el rodeo seleccionado
             const seriesFiltradas = seriesGlobales.filter(s => {
                 if(rodeoSeleccionadoFiltro !== "TODOS" && s.rodeoNombre !== rodeoSeleccionadoFiltro) return false;
                 return true;
@@ -343,6 +355,8 @@ window.verificarPassword = async function() {
                                   `<span class="badge-pendiente">⏳ PENDIENTE</span>`;
 
                 let botonPagoHTML = ins.comprobanteUrl ? `<a href="${ins.comprobanteUrl}" target="_blank" class="btn-pago">👁️ Ver Pago</a>` : '';
+                let botonFmaHTML = ins.fmaUrl && ins.fmaUrl !== "No requerido" ? `<a href="${ins.fmaUrl}" target="_blank" class="btn-pago" style="background:#2980b9; color:#fff;">📄 Ver FMA</a>` : '';
+                let botonVacunasHTML = ins.vacunasUrl && ins.vacunasUrl !== "No requerido" ? `<a href="${ins.vacunasUrl}" target="_blank" class="btn-pago" style="background:#8e44ad; color:#fff;">💉 Ver Vacunas</a>` : '';
 
                 tbody.innerHTML += `
                     <tr>
@@ -351,6 +365,8 @@ window.verificarPassword = async function() {
                         <td class="acciones-col">
                             ${badgeEstado}
                             ${botonPagoHTML}
+                            ${botonFmaHTML}
+                            ${botonVacunasHTML}
                             <button class="btn-aprobar" onclick="cambiarEstadoPago('${ins.id}', 'aprobado')">Aprobar</button>
                             <button class="btn-rechazar" onclick="cambiarEstadoPago('${ins.id}', 'rechazado')">Rechazar</button>
                             <button class="btn-eliminar" style="width:100%; margin-top:5px;" onclick="borrarPermanente('inscripciones', '${ins.id}', '¿Eliminar esta collera?')">🗑️ Borrar</button>
@@ -390,13 +406,31 @@ window.verificarPassword = async function() {
             const rodeo = document.getElementById('rodeoParaSerie').value;
             const serie = document.getElementById('nuevaSerie').value;
             const minutos = parseInt(document.getElementById('tiempoSerie').value);
-            if(!rodeo || !serie || !minutos) return alert("Completa todos los campos");
+            const reqFma = document.getElementById('reqFmaSerie').checked;
+            const reqVacunas = document.getElementById('reqVacunasSerie').checked;
+
+            if(!rodeo || !serie || !minutos) return alert("Completa todos los campos obligatorios de la serie.");
             
+            // Doble confirmación solicitada para asegurar los requerimientos
+            let mensajeConfirmacion = `¿Está seguro de crear la serie "${serie}" para el rodeo "${rodeo}"?\n\nConfiguración de Requisitos:\n- Documento FMA: ${reqFma ? 'OBLIGATORIO' : 'NO REQUERIDO'}\n- Certificado de Vacunas: ${reqVacunas ? 'OBLIGATORIO' : 'NO REQUERIDO'}`;
+            if(!confirm(mensajeConfirmacion)) return;
+            if(!confirm("⚠️ Segunda confirmación: ¿Confirma que los parámetros y requisitos seleccionados para esta serie son correctos?")) return;
+
             await addDoc(collection(db, "series"), { 
-                nombre: serie, rodeoNombre: rodeo, estado: "abierto", 
-                fechaApertura: Date.now(), fechaCierre: Date.now() + (minutos * 60 * 1000)
+                nombre: serie, 
+                rodeoNombre: rodeo, 
+                estado: "abierto", 
+                fechaApertura: Date.now(), 
+                fechaCierre: Date.now() + (minutos * 60 * 1000),
+                pideFma: reqFma,
+                pideVacunas: reqVacunas
             });
-            document.getElementById('nuevaSerie').value = ''; document.getElementById('tiempoSerie').value = '';
+
+            document.getElementById('nuevaSerie').value = ''; 
+            document.getElementById('tiempoSerie').value = '';
+            document.getElementById('reqFmaSerie').checked = false;
+            document.getElementById('reqVacunasSerie').checked = false;
+            alert("¡Serie creada exitosamente!");
         };
 
         function separarRut(rutCompleto) {
@@ -470,11 +504,19 @@ window.verificarPassword = async function() {
                     "Nombre Segundo Caballo": ins.caballo2 || "-",
                     "N° Segundo Caballo": ins.nroCaballo2 || "-",
                     "Criadero": criaderosUnidos || "-",
-                    "Link Comprobante (ImgBB)": ins.comprobanteUrl || "-"
+                    "Link Comprobante (ImgBB)": ins.comprobanteUrl || "-",
+                    "Documento FMA": ins.fmaUrl || "No requerido / N/A",
+                    "Certificado Vacunas": ins.vacunasUrl || "No requerido / N/A"
                 };
             });
 
             const ws = XLSX.utils.json_to_sheet(filasExcel);
+
+            // Agregar nota de descargo de responsabilidad legal y técnica al final del documento
+            XLSX.utils.sheet_add_aoa(ws, [
+                [],
+                ["AVISO LEGAL Y TÉCNICO: Los enlaces a los archivos adjuntos (Comprobante de pago, Certificado de Vacunas y Documento FMA) tienen carácter temporal con una vigencia limitada de una semana. La Asociación de Rodeo Santiago Cumbre y el desarrollo del sistema no se responsabilizan por la disponibilidad permanente de las imágenes en dichos enlaces externos una vez expirado el plazo operativo."]
+            ], { origin: -1 });
 
             const range = XLSX.utils.decode_range(ws['!ref']);
             for (let R = range.s.r; R <= range.e.r; ++R) {
