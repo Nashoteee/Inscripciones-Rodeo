@@ -27,6 +27,7 @@
         table { width: 100%; border-collapse: collapse; margin-top: 10px; font-size: 13px; background: #353b48; }
         th, td { border: 1px solid #485460; padding: 8px; text-align: left; vertical-align: top; }
         th { background-color: #2f3640; color: #f1c40f; }
+        .btn-accion-tabla { padding: 6px 12px; margin-bottom: 5px; width: 100%; box-sizing: border-box; font-size: 13px; }
     </style>
 </head>
 <body>
@@ -86,7 +87,7 @@
 
         window.addEventListener('DOMContentLoaded', () => {
             const sesionDevActiva = sessionStorage.getItem('dev_santiago_cumbre_auth');
-            const hashDevEsperado = "be46db70f624d123856f10d01c385cd30a823d7177af4d3995f57e27afb27236";
+            const hashDevEsperado = "7691a81c8ebd9e37886813fae57afd0bea83e1d218fb89b1ea8cc90326772322";
 
             if (sesionDevActiva === hashDevEsperado) {
                 document.getElementById('devDashboard').style.display = "block";
@@ -175,7 +176,7 @@
 
                         html += `</select>
                             </td>
-                            <td><button onclick="procesarRescateSerie('${s.id}', '${selectId}', '${nombreRodeoFaltante.replace(/'/g, "\\'")}')" style="padding: 6px 12px; margin: 0; background: #27ae60;">Aplicar</button></td>
+                            <td><button onclick="procesarRescateSerie('${s.id}', '${selectId}', '${nombreRodeoFaltante.replace(/'/g, "\\'")}')" class="btn-accion-tabla" style="background: #27ae60;">Aplicar</button></td>
                         </tr>`;
                     });
                     html += `</tbody></table><br>`;
@@ -184,7 +185,7 @@
                 // --- TABLA 2: COLLERAS / INSCRIPCIONES HUÉRFANAS ---
                 if (collerasHuerfanas.length > 0) {
                     html += `<p style="color: #e67e22; font-weight: bold; margin-top: 15px;">⚠️ Se encontraron ${collerasHuerfanas.length} collera(s) / inscripción(es) con referencias inválidas (Rodeo o Serie inexistentes):</p>`;
-                    html += `<table><thead><tr><th>Datos de la Collera</th><th>Rodeo y Serie Actuales</th><th>Reasignar a Rodeo / Serie Válidos</th><th>Acciones</th></tr></thead><tbody>`;
+                    html += `<table><thead><tr><th>Datos de la Collera</th><th>Rodeo y Serie Actuales</th><th>Reasignar a Rodeo / Serie Válidos</th><th>Acciones de Rescate</th></tr></thead><tbody>`;
 
                     collerasHuerfanas.forEach(c => {
                         let selectRodeoId = `select_collera_rodeo_${c.id}`;
@@ -211,8 +212,8 @@
                                 </select>
                             </td>
                             <td>
-                                <button onclick="procesarRescateCollera('${c.id}', '${selectRodeoId}', '${selectSerieId}')" style="padding: 6px 12px; margin-bottom: 6px; background: #2980b9;">Reasignar</button>
-                                <button onclick="eliminarColleraHuerfana('${c.id}')" style="padding: 6px 12px; margin: 0; background: #c0392b;">🗑️ Eliminar</button>
+                                <button onclick="procesarRescateCollera('${c.id}', '${selectRodeoId}', '${selectSerieId}')" class="btn-accion-tabla" style="background: #2980b9;">Reasignar</button>
+                                <button onclick="eliminarColleraHuerfana('${c.id}')" class="btn-accion-tabla" style="background: #c0392b;">🗑️ Eliminar</button>
                             </td>
                         </tr>`;
                     });
@@ -304,14 +305,13 @@
             }
         };
 
-        // Función para eliminar definitivamente una collera huérfana
         window.eliminarColleraHuerfana = async function(idCollera) {
             if (!confirm("⚠️ ¿Está completamente seguro de eliminar permanentemente esta collera huérfana de la base de datos? Esta acción no se puede deshacer.")) return;
 
             try {
                 await deleteDoc(doc(db, "inscripciones", idCollera));
                 alert("Collera eliminada exitosamente.");
-                window.buscarHuerfanos(); // Actualizar la lista
+                window.buscarHuerfanos();
             } catch (err) {
                 alert("Error al eliminar la collera: " + err.message);
             }
