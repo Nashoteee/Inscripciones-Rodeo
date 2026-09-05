@@ -27,7 +27,8 @@
         table { width: 100%; border-collapse: collapse; margin-top: 10px; font-size: 13px; background: #353b48; }
         th, td { border: 1px solid #485460; padding: 8px; text-align: left; vertical-align: top; }
         th { background-color: #2f3640; color: #f1c40f; }
-        .btn-accion-tabla { padding: 6px 12px; margin-bottom: 5px; width: 100%; box-sizing: border-box; font-size: 13px; }
+        .btn-accion-tabla { padding: 6px 12px; margin-bottom: 0; width: 100%; box-sizing: border-box; font-size: 13px; }
+        .barra-superior-acciones { display: flex; justify-content: space-between; align-items: center; margin-bottom: 12px; flex-wrap: wrap; gap: 10px; background: #353b48; padding: 10px; border-radius: 6px; border: 1px solid #485460; }
     </style>
 </head>
 <body>
@@ -51,7 +52,7 @@
         <div class="card">
             <h3>🔗 Rescate Profundo de Series y Colleras Huérfanas</h3>
             <div class="alerta-info">
-                💡 Esta herramienta escanea la base de datos en busca de <strong>Series</strong> (sin rodeo válido) e <strong>Inscripciones/Colleras</strong> (cuyo rodeo o serie ya no existen). Permite recrear el rodeo original, reasignar los registros o eliminarlos definitivamente.
+                💡 Esta herramienta escanea la base de datos en busca de <strong>Series</strong> (sin rodeo válido) e <strong>Inscripciones/Colleras</strong> (cuyo rodeo o serie ya no existen). Puedes reasignar los datos en los menús y guardarlos con el botón superior, o eliminar registros obsoletos uno a uno.
             </div>
             
             <button onclick="buscarHuerfanos()" style="background-color: #2980b9; width: auto; padding: 8px 15px;">🔍 Escanear Base de Datos (Series y Colleras)</button>
@@ -185,7 +186,16 @@
                 // --- TABLA 2: COLLERAS / INSCRIPCIONES HUÉRFANAS ---
                 if (collerasHuerfanas.length > 0) {
                     html += `<p style="color: #e67e22; font-weight: bold; margin-top: 15px;">⚠️ Se encontraron ${collerasHuerfanas.length} collera(s) / inscripción(es) con referencias inválidas (Rodeo o Serie inexistentes):</p>`;
-                    html += `<table><thead><tr><th>Datos de la Collera</th><th>Rodeo y Serie Actuales</th><th>Reasignar a Rodeo / Serie Válidos</th><th>Acciones de Rescate</th></tr></thead><tbody>`;
+                    
+                    // Barra superior con un único botón global para guardar los cambios de las colleras
+                    html += `
+                        <div class="barra-superior-acciones">
+                            <span style="font-size: 13px; color: #f1c40f; font-weight: bold;">⚡ Panel de reasignación masiva de colleras:</span>
+                            <button onclick="guardarTodasLasColleras()" style="background-color: #27ae60; width: auto; padding: 8px 18px; margin: 0; font-size: 13px;">💾 Guardar Todos los Cambios de Colleras</button>
+                        </div>
+                    `;
+
+                    html += `<table><thead><tr><th>Datos de la Collera</th><th>Rodeo y Serie Actuales</th><th>Reasignar a Rodeo / Serie Válidos</th><th>Acción Individual</th></tr></thead><tbody>`;
 
                     collerasHuerfanas.forEach(c => {
                         let selectRodeoId = `select_collera_rodeo_${c.id}`;
@@ -193,12 +203,12 @@
                         
                         let infoCollera = `<strong>1°:</strong> ${c.jinete1 || '-'} (${c.rut1 || '-'})<br><strong>2°:</strong> ${c.jinete2 || '-'} (${c.rut2 || '-'})`;
 
-                        html += `<tr>
+                        html += `<tr class="fila-collera" data-id="${c.id}">
                             <td>${infoCollera}</td>
                             <td style="color: #e74c3c;">Rodeo: ${c.rodeo || 'N/A'}<br>Serie: ${c.serie || 'N/A'}</td>
                             <td>
                                 <div style="font-size: 11px; margin-bottom: 2px;">Nuevo Rodeo:</div>
-                                <select id="${selectRodeoId}" onchange="actualizarSeriesDisponibles('${c.id}')" style="margin-bottom: 6px;">
+                                <select id="${selectRodeoId}" class="input-rodeo-collera" data-id="${c.id}" onchange="actualizarSeriesDisponibles('${c.id}')" style="margin-bottom: 6px;">
                                     <option value="">-- Seleccionar Rodeo --</option>`;
                         
                         listaRodeos.forEach(r => {
@@ -207,12 +217,11 @@
 
                         html += `</select>
                                 <div style="font-size: 11px; margin-bottom: 2px;">Nueva Serie:</div>
-                                <select id="${selectSerieId}">
+                                <select id="${selectSerieId}" class="input-serie-collera">
                                     <option value="">-- Primero seleccione Rodeo --</option>
                                 </select>
                             </td>
                             <td>
-                                <button onclick="procesarRescateCollera('${c.id}', '${selectRodeoId}', '${selectSerieId}')" class="btn-accion-tabla" style="background: #2980b9;">Reasignar</button>
                                 <button onclick="eliminarColleraHuerfana('${c.id}')" class="btn-accion-tabla" style="background: #c0392b;">🗑️ Eliminar</button>
                             </td>
                         </tr>`;
@@ -282,26 +291,49 @@
             }
         };
 
-        window.procesarRescateCollera = async function(idCollera, selectRodeoId, selectSerieId) {
-            const nuevoRodeo = document.getElementById(selectRodeoId).value;
-            const nuevaSerie = document.getElementById(selectSerieId).value;
+        // Función para guardar masivamente todas las colleras modificadas mediante el botón superior
+        window.guardarTodasLasColleras = async function() {
+            const filas = document.querySelectorAll('.fila-collera');
+            if (filas.length === 0) return;
 
-            if (!nuevoRodeo || !nuevaSerie) {
-                alert("Debe seleccionar tanto un rodeo válido como una serie de destino.");
+            let cambiosAProcesar = [];
+
+            filas.forEach(fila => {
+                let idCollera = fila.getAttribute('data-id');
+                let rodeoSelect = document.getElementById(`select_collera_rodeo_${idCollera}`);
+                let serieSelect = document.getElementById(`select_collera_serie_${idCollera}`);
+
+                let rodeoVal = rodeoSelect.value;
+                let serieVal = serieSelect.value;
+
+                if (rodeoVal && serieVal) {
+                    cambiosAProcesar.push({
+                        id: idCollera,
+                        rodeo: rodeoVal,
+                        serie: serieVal
+                    });
+                }
+            });
+
+            if (cambiosAProcesar.length === 0) {
+                alert("⚠️ No hay ninguna collera con rodeo y serie seleccionados para guardar. Por favor, configure al menos una en los menús desplegables.");
                 return;
             }
 
-            if (!confirm(`¿Confirma reasignar esta collera al Rodeo: "${nuevoRodeo}" / Serie: "${nuevaSerie}"?`)) return;
+            if (!confirm(`¿Confirma actualizar y reasignar las ${cambiosAProcesar.length} collera(s) configuradas?`)) return;
 
             try {
-                await updateDoc(doc(db, "inscripciones", idCollera), {
-                    rodeo: nuevoRodeo,
-                    serie: nuevaSerie
-                });
-                alert("¡Collera reasignada exitosamente a la nueva ubicación!");
+                for (let cambio of cambiosAProcesar) {
+                    await updateDoc(doc(db, "inscripciones", cambio.id), {
+                        rodeo: cambio.rodeo,
+                        serie: cambio.serie
+                    });
+                }
+
+                alert("¡Todas las colleras seleccionadas fueron reasignadas y guardadas exitosamente!");
                 window.buscarHuerfanos();
             } catch (err) {
-                alert("Error al actualizar la collera: " + err.message);
+                alert("Error al guardar los cambios masivos: " + err.message);
             }
         };
 
