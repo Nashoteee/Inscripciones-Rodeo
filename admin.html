@@ -409,6 +409,7 @@
                                   estadoPago === "rechazado" ? `<span class="badge-rechazado">❌ RECHAZADO</span>` :
                                   `<span class="badge-pendiente">⏳ PENDIENTE</span>`;
 
+                // --- OPTIMIZACIÓN DE RENDIMIENTO: ENLACES LIGEROS TIPO BOTÓN ---
                 let botonPagoHTML = ins.comprobanteUrl ? `<a href="${ins.comprobanteUrl}" target="_blank" class="btn-pago">👁️ Ver Pago</a>` : '';
                 let botonFmaHTML = ins.fmaUrl && ins.fmaUrl !== "No requerido" ? `<a href="${ins.fmaUrl}" target="_blank" class="btn-pago" style="background:#2980b9; color:#fff;">📄 Ver FMA</a>` : '';
                 
